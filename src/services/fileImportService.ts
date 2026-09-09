@@ -65,28 +65,27 @@ class FileImportService {
     if (!normTitle) return false;
 
     return existingTracks.some((t) => {
+      // Never block imports if the existing entry was 0-byte or corrupted
+      if (t.fileSize === 0 && !t.duration) return false;
+
       const existingTitle = normalizeText(t.title);
       const existingArtist = normalizeText(t.artist);
 
-      // Check 1: Same title and artist (or generic/empty artist)
+      // Check 1: Same title and artist
       if (normTitle === existingTitle) {
         if (
-          !normArtist ||
-          !existingArtist ||
-          normArtist === 'localimport' ||
-          existingArtist === 'localimport' ||
-          normArtist === 'unknownartist' ||
-          existingArtist === 'unknownartist' ||
-          normArtist === existingArtist
+          normArtist === existingArtist ||
+          ((!normArtist || normArtist === 'localimport' || normArtist === 'unknownartist') &&
+           (!existingArtist || existingArtist === 'localimport' || existingArtist === 'unknownartist'))
         ) {
           return true;
         }
       }
 
-      // Check 2: Same filename in URI
+      // Check 2: Exact same filename
       if (originalFileName) {
         const uriFileName = t.uri.split('/').pop()?.split('?')[0]?.toLowerCase();
-        if (uriFileName && uriFileName.includes(originalFileName.toLowerCase())) {
+        if (uriFileName && uriFileName === originalFileName.toLowerCase()) {
           return true;
         }
       }
@@ -239,10 +238,10 @@ class FileImportService {
           const filePath = `${dir}${file}`;
           const { title, artist } = this.parseMetadataFromFileName(file);
 
-          // Check if file is already registered in library
+          // Check if file is already registered in library with a valid non-empty entry
           const isAlreadyRegistered = existingTracks.some((t) => {
             const trackFileName = t.uri.split('/').pop()?.split('?')[0];
-            return trackFileName === file;
+            return trackFileName === file && (t.fileSize || 0) > 0;
           });
 
           const isDup = isAlreadyRegistered ||
