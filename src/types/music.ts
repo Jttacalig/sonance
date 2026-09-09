@@ -31,6 +31,7 @@ export interface Playlist {
 
 export type DownloadStatus = 
   | 'idle' 
+  | 'queued'
   | 'resolving' 
   | 'downloading' 
   | 'saving' 
@@ -44,6 +45,7 @@ export interface DownloadItem {
   artist: string;
   thumbnailUrl?: string;
   duration?: number;
+  format?: string;
   status: DownloadStatus;
   progress: number; // 0 to 1
   bytesDownloaded: number;

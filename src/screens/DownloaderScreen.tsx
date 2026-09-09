@@ -35,13 +35,15 @@ export const DownloaderScreen: React.FC = () => {
   const {
     downloads,
     activeCount,
+    queuedCount,
     openDownloadsModal,
     addDownload,
+    addBulkDownloads,
     cancelDownload,
     removeDownload,
     clearCompleted,
   } = useDownloads();
-  const { refreshLibrary } = useLibrary();
+  const { tracks, refreshLibrary } = useLibrary();
   const { colors, isDark } = useTheme();
 
   // Search state
@@ -49,6 +51,10 @@ export const DownloaderScreen: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Bulk Mode state
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
 
   // Embedded Video/Stream Modal state
   const [previewVideoItem, setPreviewVideoItem] = useState<SearchResultItem | null>(null);
@@ -70,6 +76,8 @@ export const DownloaderScreen: React.FC = () => {
     Keyboard.dismiss();
     setIsSearching(true);
     setHasSearched(true);
+    setIsBulkMode(false);
+    setSelectedItemIds([]);
 
     try {
       const results = await youtubeSearchService.search(q);
@@ -84,6 +92,85 @@ export const DownloaderScreen: React.FC = () => {
   const handleSelectQuickChip = (chipQuery: string) => {
     setSearchQuery(chipQuery);
     handleSearch(chipQuery);
+  };
+
+  // Bulk Mode Actions
+  const handleToggleBulkMode = () => {
+    if (Haptics.impactAsync) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+    if (isBulkMode) {
+      setIsBulkMode(false);
+      setSelectedItemIds([]);
+    } else {
+      setIsBulkMode(true);
+    }
+  };
+
+  const handleToggleSelectItem = (id: string) => {
+    if (Haptics.selectionAsync) {
+      Haptics.selectionAsync().catch(() => {});
+    }
+    setSelectedItemIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (Haptics.impactAsync) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+    if (selectedItemIds.length === searchResults.length) {
+      setSelectedItemIds([]);
+    } else {
+      setSelectedItemIds(searchResults.map(s => s.id));
+    }
+  };
+
+  const handleExecuteBulkDownload = async () => {
+    if (selectedItemIds.length === 0) return;
+
+    const isGranted = await storageService.isStoragePermissionGranted();
+    if (!isGranted) {
+      setIsStoragePermissionModalVisible(true);
+      return;
+    }
+
+    try {
+      const settings = await storageService.getSettings();
+      const preferredFormat = settings.preferredAudioQuality || 'm4a';
+
+      const selectedItems = searchResults.filter(s => selectedItemIds.includes(s.id));
+      const bulkEntries = selectedItems.map(item => ({
+        info: {
+          title: item.title,
+          artist: item.artist,
+          thumbnailUrl: item.thumbnailUrl,
+          sourceUrl: item.sourceUrl,
+          sourceType: 'youtube' as const,
+          duration: item.durationSec,
+          durationText: item.duration,
+          format: preferredFormat,
+        },
+        format: preferredFormat,
+      }));
+
+      await addBulkDownloads(bulkEntries);
+
+      if (Haptics.notificationAsync) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      }
+
+      const count = selectedItems.length;
+      setIsBulkMode(false);
+      setSelectedItemIds([]);
+      Alert.alert(
+        'Downloads Queued 🚀',
+        `Added ${count} tracks (${preferredFormat.toUpperCase()}) to your background download queue.`
+      );
+    } catch (err: any) {
+      Alert.alert('Bulk Download Error', err?.message || 'Could not queue selected tracks.');
+    }
   };
 
   // Open embedded video / audio stream player
@@ -118,17 +205,18 @@ export const DownloaderScreen: React.FC = () => {
 
   const handleExecuteDownload = async (info: ExtractedInfo, format: AudioFormat) => {
     try {
-      setIsStartingDownload(true);
       setIsFormatModalVisible(false);
       setSelectedTrackForFormat(null);
       setPendingDownload(null);
 
+      if (Haptics.impactAsync) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      }
+
+      // Non-blocking asynchronous queueing
       await addDownload(info, format);
-      await refreshLibrary();
     } catch (error: any) {
-      Alert.alert('Download Error', error?.message || 'Failed to download audio track.');
-    } finally {
-      setIsStartingDownload(false);
+      Alert.alert('Download Error', error?.message || 'Failed to queue audio track.');
     }
   };
 
@@ -148,6 +236,87 @@ export const DownloaderScreen: React.FC = () => {
     if (pendingDownload) {
       await handleExecuteDownload(pendingDownload.info, pendingDownload.format);
     }
+  };
+
+  // Helper to get live download/library status of an item
+  const getItemStatus = (item: SearchResultItem) => {
+    const inLib = tracks.some(
+      t =>
+        (t.sourceUrl === item.sourceUrl ||
+          (t.title.toLowerCase() === item.title.toLowerCase() &&
+            t.artist.toLowerCase() === item.artist.toLowerCase())) &&
+        (t.fileSize || 0) > 0
+    );
+    if (inLib) return { type: 'in_library', label: 'In Library' };
+
+    const activeDl = downloads.find(d => d.url === item.sourceUrl);
+    if (activeDl) {
+      if (activeDl.status === 'queued') return { type: 'queued', label: 'Queued' };
+      if (activeDl.status === 'resolving') return { type: 'resolving', label: 'Resolving...' };
+      if (activeDl.status === 'downloading')
+        return {
+          type: 'downloading',
+          label: `${Math.round(activeDl.progress * 100)}%`,
+          progress: activeDl.progress,
+        };
+      if (activeDl.status === 'saving') return { type: 'saving', label: 'Saving...' };
+      if (activeDl.status === 'completed') return { type: 'completed', label: 'Saved' };
+      if (activeDl.status === 'error') return { type: 'error', label: 'Retry' };
+    }
+    return null;
+  };
+
+  const renderCompatibilityBadge = (item: SearchResultItem) => {
+    let badgeColor = colors.primary;
+    let badgeBg = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
+    let badgeBorder = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)';
+    let iconName: any = 'musical-note';
+    let label = item.badgeLabel || 'Track';
+
+    switch (item.compatibilityType) {
+      case 'official_audio':
+        badgeColor = '#10B981';
+        badgeBg = isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.12)';
+        badgeBorder = isDark ? 'rgba(16, 185, 129, 0.35)' : 'rgba(16, 185, 129, 0.3)';
+        iconName = 'sparkles';
+        label = 'Official Audio';
+        break;
+      case 'music_video':
+        badgeColor = '#8B5CF6';
+        badgeBg = isDark ? 'rgba(139, 92, 246, 0.15)' : 'rgba(139, 92, 246, 0.12)';
+        badgeBorder = isDark ? 'rgba(139, 92, 246, 0.35)' : 'rgba(139, 92, 246, 0.3)';
+        iconName = 'videocam';
+        label = 'Music Video';
+        break;
+      case 'lyrics':
+        badgeColor = '#F59E0B';
+        badgeBg = isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.12)';
+        badgeBorder = isDark ? 'rgba(245, 158, 11, 0.35)' : 'rgba(245, 158, 11, 0.3)';
+        iconName = 'mic-outline';
+        label = 'Lyrics';
+        break;
+      case 'live':
+        badgeColor = '#F43F5E';
+        badgeBg = isDark ? 'rgba(244, 63, 94, 0.15)' : 'rgba(244, 63, 94, 0.12)';
+        badgeBorder = isDark ? 'rgba(244, 63, 94, 0.35)' : 'rgba(244, 63, 94, 0.3)';
+        iconName = 'radio-outline';
+        label = 'Live';
+        break;
+      case 'remix':
+        badgeColor = '#6366F1';
+        badgeBg = isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.12)';
+        badgeBorder = isDark ? 'rgba(99, 102, 241, 0.35)' : 'rgba(99, 102, 241, 0.3)';
+        iconName = 'disc-outline';
+        label = 'Remix';
+        break;
+    }
+
+    return (
+      <View style={[styles.compatBadge, { backgroundColor: badgeBg, borderColor: badgeBorder }]}>
+        <Ionicons name={iconName} size={10} color={badgeColor} style={{ marginRight: 3 }} />
+        <Text style={[styles.compatBadgeText, { color: badgeColor }]}>{label}</Text>
+      </View>
+    );
   };
 
   return (
@@ -346,122 +515,263 @@ export const DownloaderScreen: React.FC = () => {
               </View>
             ) : searchResults.length > 0 ? (
               <View style={styles.resultsList}>
-                <Text style={[styles.resultsCountHeader, { color: colors.textSecondary }]}>
-                  FOUND {searchResults.length} TRACKS
-                </Text>
-
-                {searchResults.map((item) => (
-                  <View
-                    key={item.id}
-                    style={[
-                      styles.resultCard,
-                      {
-                        backgroundColor: isDark
-                          ? 'rgba(255, 255, 255, 0.05)'
-                          : 'rgba(255, 255, 255, 0.65)',
-                        borderColor: isDark
-                          ? 'rgba(255, 255, 255, 0.1)'
-                          : 'rgba(200, 212, 228, 0.5)',
-                        shadowColor: isDark ? '#000' : '#8CA0BA',
-                      },
-                    ]}
-                  >
-                    {/* Thumbnail with duration badge & tap to play video preview */}
+                {/* Results Header with Bulk Select Toggle */}
+                <View style={styles.resultsSectionHeader}>
+                  <Text style={[styles.resultsCountHeader, { color: colors.textSecondary }]}>
+                    FOUND {searchResults.length} TRACKS
+                  </Text>
+                  <View style={styles.bulkHeaderActions}>
+                    {isBulkMode && (
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={handleSelectAll}
+                        style={[
+                          styles.bulkHeaderBtn,
+                          {
+                            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+                            borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.bulkHeaderBtnText, { color: colors.primary }]}>
+                          {selectedItemIds.length === searchResults.length ? 'Deselect All' : 'Select All'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                     <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => handleOpenStreamPreview(item)}
-                      style={styles.resultThumbContainer}
+                      activeOpacity={0.7}
+                      onPress={handleToggleBulkMode}
+                      style={[
+                        styles.bulkToggleBtn,
+                        isBulkMode
+                          ? { backgroundColor: colors.primary, borderColor: colors.primary }
+                          : {
+                              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+                              borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
+                            },
+                      ]}
                     >
-                      <Image
-                        source={{ uri: item.thumbnailUrl }}
-                        style={styles.resultThumb}
+                      <Ionicons
+                        name={isBulkMode ? 'checkmark-done' : 'checkbox-outline'}
+                        size={13}
+                        color={isBulkMode ? '#FFFFFF' : (isDark ? '#FFFFFF' : colors.textPrimary)}
                       />
-                      <View style={styles.thumbPlayOverlay}>
-                        <Ionicons name="play-circle" size={24} color="#FFF" />
-                      </View>
-                      {item.duration && (
-                        <View style={styles.resultDurationBadge}>
-                          <Text style={styles.resultDurationText}>{item.duration}</Text>
+                      <Text
+                        style={[
+                          styles.bulkToggleBtnText,
+                          { color: isBulkMode ? '#FFFFFF' : (isDark ? '#FFFFFF' : colors.textPrimary) },
+                        ]}
+                      >
+                        {isBulkMode ? 'Done' : 'Bulk Select'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {searchResults.map((item) => {
+                  const isSelected = selectedItemIds.includes(item.id);
+                  const itemStatus = getItemStatus(item);
+
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      activeOpacity={isBulkMode ? 0.85 : 1}
+                      onPress={() => {
+                        if (isBulkMode) {
+                          handleToggleSelectItem(item.id);
+                        }
+                      }}
+                      style={[
+                        styles.resultCard,
+                        {
+                          backgroundColor: isSelected
+                            ? (isDark ? 'rgba(99, 102, 241, 0.18)' : 'rgba(99, 102, 241, 0.12)')
+                            : isDark
+                            ? 'rgba(255, 255, 255, 0.05)'
+                            : 'rgba(255, 255, 255, 0.65)',
+                          borderColor: isSelected
+                            ? colors.primary
+                            : isDark
+                            ? 'rgba(255, 255, 255, 0.1)'
+                            : 'rgba(200, 212, 228, 0.5)',
+                          shadowColor: isDark ? '#000' : '#8CA0BA',
+                        },
+                      ]}
+                    >
+                      {/* Checkbox in Bulk Mode */}
+                      {isBulkMode && (
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          onPress={() => handleToggleSelectItem(item.id)}
+                          style={styles.checkboxContainer}
+                        >
+                          <View
+                            style={[
+                              styles.checkboxCircle,
+                              isSelected && { backgroundColor: colors.primary, borderColor: colors.primary },
+                              !isSelected && {
+                                borderColor: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.25)',
+                              },
+                            ]}
+                          >
+                            {isSelected && <Ionicons name="checkmark" size={14} color="#FFF" />}
+                          </View>
+                        </TouchableOpacity>
+                      )}
+
+                      {/* Thumbnail with duration badge & tap to play video preview */}
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => (isBulkMode ? handleToggleSelectItem(item.id) : handleOpenStreamPreview(item))}
+                        style={styles.resultThumbContainer}
+                      >
+                        <Image
+                          source={{ uri: item.thumbnailUrl }}
+                          style={styles.resultThumb}
+                        />
+                        <View style={styles.thumbPlayOverlay}>
+                          <Ionicons name="play-circle" size={24} color="#FFF" />
+                        </View>
+                        {item.duration && (
+                          <View style={styles.resultDurationBadge}>
+                            <Text style={styles.resultDurationText}>{item.duration}</Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+
+                      {/* Title, Artist, & Badges */}
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => (isBulkMode ? handleToggleSelectItem(item.id) : handleOpenStreamPreview(item))}
+                        style={styles.resultInfo}
+                      >
+                        <Text
+                          style={[styles.resultTitle, { color: colors.textPrimary }]}
+                          numberOfLines={1}
+                        >
+                          {item.title}
+                        </Text>
+                        <Text
+                          style={[styles.resultArtist, { color: colors.textSecondary }]}
+                          numberOfLines={1}
+                        >
+                          {item.artist}
+                        </Text>
+                        <View style={styles.metaBadgeRow}>
+                          {renderCompatibilityBadge(item)}
+                          {item.viewCount && (
+                            <Text
+                              style={[styles.resultViews, { color: colors.textMuted }]}
+                              numberOfLines={1}
+                            >
+                              {item.viewCount}
+                            </Text>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+
+                      {/* Action Buttons: Play + Save / Status */}
+                      {!isBulkMode && (
+                        <View style={styles.resultActions}>
+                          <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={() => handleOpenStreamPreview(item)}
+                            style={[
+                              styles.playPreviewBtn,
+                              {
+                                backgroundColor: isDark
+                                  ? 'rgba(255, 255, 255, 0.08)'
+                                  : 'rgba(235, 240, 248, 0.9)',
+                                borderColor: isDark
+                                  ? 'rgba(255, 255, 255, 0.16)'
+                                  : 'rgba(200, 212, 228, 0.6)',
+                              },
+                            ]}
+                          >
+                            <Ionicons name="play" size={12} color={colors.primary} />
+                          </TouchableOpacity>
+
+                          {/* Download / Status Badge Button */}
+                          {itemStatus ? (
+                            <View
+                              style={[
+                                styles.statusBadgeBtn,
+                                itemStatus.type === 'in_library' || itemStatus.type === 'completed'
+                                  ? {
+                                      backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.12)',
+                                      borderColor: isDark ? 'rgba(16, 185, 129, 0.35)' : 'rgba(16, 185, 129, 0.3)',
+                                    }
+                                  : itemStatus.type === 'downloading' || itemStatus.type === 'resolving' || itemStatus.type === 'queued'
+                                  ? {
+                                      backgroundColor: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.12)',
+                                      borderColor: isDark ? 'rgba(99, 102, 241, 0.35)' : 'rgba(99, 102, 241, 0.3)',
+                                    }
+                                  : {
+                                      backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.12)',
+                                      borderColor: isDark ? 'rgba(239, 68, 68, 0.35)' : 'rgba(239, 68, 68, 0.3)',
+                                    },
+                              ]}
+                            >
+                              <Ionicons
+                                name={
+                                  itemStatus.type === 'in_library' || itemStatus.type === 'completed'
+                                    ? 'checkmark-circle'
+                                    : itemStatus.type === 'downloading'
+                                    ? 'arrow-down'
+                                    : itemStatus.type === 'queued'
+                                    ? 'hourglass-outline'
+                                    : itemStatus.type === 'error'
+                                    ? 'alert-circle'
+                                    : 'sync'
+                                }
+                                size={11}
+                                color={
+                                  itemStatus.type === 'in_library' || itemStatus.type === 'completed'
+                                    ? '#10B981'
+                                    : itemStatus.type === 'error'
+                                    ? '#EF4444'
+                                    : colors.primary
+                                }
+                              />
+                              <Text
+                                style={[
+                                  styles.statusBadgeText,
+                                  {
+                                    color:
+                                      itemStatus.type === 'in_library' || itemStatus.type === 'completed'
+                                        ? '#10B981'
+                                        : itemStatus.type === 'error'
+                                        ? '#EF4444'
+                                        : colors.primary,
+                                  },
+                                ]}
+                              >
+                                {itemStatus.label}
+                              </Text>
+                            </View>
+                          ) : (
+                            <TouchableOpacity
+                              activeOpacity={0.8}
+                              onPress={() => handleOpenFormatModalForSearchResult(item)}
+                              style={[
+                                styles.resultDownloadBtn,
+                                {
+                                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)',
+                                  borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.12)',
+                                },
+                              ]}
+                            >
+                              <Ionicons name="arrow-down" size={13} color={isDark ? '#FFFFFF' : colors.primary} />
+                              <Text style={[styles.resultDownloadBtnText, { color: isDark ? '#FFFFFF' : colors.primary }]}>
+                                Save
+                              </Text>
+                            </TouchableOpacity>
+                          )}
                         </View>
                       )}
                     </TouchableOpacity>
-
-                    {/* Title & Artist (Tap to Play Preview) */}
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      onPress={() => handleOpenStreamPreview(item)}
-                      style={styles.resultInfo}
-                    >
-                      <Text
-                        style={[styles.resultTitle, { color: colors.textPrimary }]}
-                        numberOfLines={2}
-                      >
-                        {item.title}
-                      </Text>
-                      <Text
-                        style={[styles.resultArtist, { color: colors.textSecondary }]}
-                        numberOfLines={1}
-                      >
-                        {item.artist}
-                      </Text>
-                      {item.viewCount && (
-                        <Text
-                          style={[styles.resultViews, { color: colors.textMuted }]}
-                          numberOfLines={1}
-                        >
-                          {item.viewCount}
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-
-                    {/* Action Buttons: [ ▶ Play ] + [ ⬇ Save ] */}
-                    <View style={styles.resultActions}>
-                      {/* Play Preview Button */}
-                      <TouchableOpacity
-                        activeOpacity={0.8}
-                        onPress={() => handleOpenStreamPreview(item)}
-                        style={[
-                          styles.playPreviewBtn,
-                          {
-                            backgroundColor: isDark
-                              ? 'rgba(255, 255, 255, 0.08)'
-                              : 'rgba(235, 240, 248, 0.9)',
-                            borderColor: isDark
-                              ? 'rgba(255, 255, 255, 0.16)'
-                              : 'rgba(200, 212, 228, 0.6)',
-                          },
-                        ]}
-                      >
-                        <Ionicons name="play" size={13} color={colors.primary} />
-                        <Text style={[styles.playPreviewBtnText, { color: colors.primary }]}>
-                          Play
-                        </Text>
-                      </TouchableOpacity>
-
-                      {/* Save / Download Button */}
-                      <TouchableOpacity
-                        activeOpacity={0.8}
-                        onPress={() => handleOpenFormatModalForSearchResult(item)}
-                        style={[
-                          styles.resultDownloadBtn,
-                          {
-                            backgroundColor: isDark
-                              ? 'rgba(255, 255, 255, 0.12)'
-                              : 'rgba(0, 0, 0, 0.06)',
-                            borderColor: isDark
-                              ? 'rgba(255, 255, 255, 0.2)'
-                              : 'rgba(0, 0, 0, 0.12)',
-                          },
-                        ]}
-                      >
-                        <Ionicons name="arrow-down" size={13} color={isDark ? '#FFFFFF' : colors.primary} />
-                        <Text style={[styles.resultDownloadBtnText, { color: isDark ? '#FFFFFF' : colors.primary }]}>
-                          Save
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             ) : hasSearched ? (
               <View
@@ -528,6 +838,42 @@ export const DownloaderScreen: React.FC = () => {
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* Floating Bulk Action Bar */}
+      {isBulkMode && selectedItemIds.length > 0 && (
+        <View style={[styles.floatingBulkBarWrapper, { bottom: Platform.OS === 'ios' ? 88 : 74 }]}>
+          <BlurView
+            intensity={Platform.OS === 'ios' ? 90 : 100}
+            tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
+            style={[
+              styles.floatingBulkBar,
+              {
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.28)' : 'rgba(255, 255, 255, 0.95)',
+                shadowColor: isDark ? '#000' : '#8CA0BA',
+              },
+            ]}
+          >
+            <View style={styles.bulkBarLeft}>
+              <Text style={[styles.bulkBarCount, { color: colors.textPrimary }]}>
+                {selectedItemIds.length} {selectedItemIds.length === 1 ? 'song' : 'songs'} selected
+              </Text>
+              <Text style={[styles.bulkBarSubtext, { color: colors.textMuted }]}>
+                Parallel download queue
+              </Text>
+            </View>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={handleExecuteBulkDownload}
+              style={[styles.bulkDownloadBtn, { backgroundColor: colors.primary }]}
+            >
+              <Ionicons name="arrow-down" size={16} color="#FFFFFF" />
+              <Text style={styles.bulkDownloadBtnText}>
+                Download ({selectedItemIds.length})
+              </Text>
+            </TouchableOpacity>
+          </BlurView>
+        </View>
+      )}
 
       {/* Embedded Music Video & Stream Preview Modal */}
       <MusicVideoModal
@@ -707,11 +1053,57 @@ const styles = StyleSheet.create({
   resultsSection: {
     marginBottom: SPACING.lg,
   },
+  resultsSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.xs + 4,
+  },
   resultsCountHeader: {
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.8,
-    marginBottom: SPACING.xs + 4,
+  },
+  bulkHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  bulkHeaderBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+  },
+  bulkHeaderBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  bulkToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    gap: 4,
+  },
+  bulkToggleBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  checkboxContainer: {
+    paddingRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   loadingContainer: {
     alignItems: 'center',
@@ -774,15 +1166,39 @@ const styles = StyleSheet.create({
     marginRight: SPACING.xs,
     justifyContent: 'center',
   },
+  titleBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
+  },
   resultTitle: {
     fontSize: 13,
     fontWeight: '700',
-    marginBottom: 2,
+    flexShrink: 1,
   },
   resultArtist: {
     fontSize: 12,
     fontWeight: '500',
-    marginBottom: 1,
+    marginBottom: 2,
+  },
+  metaBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  compatBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+  },
+  compatBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '700',
   },
   resultViews: {
     fontSize: 10,
@@ -796,11 +1212,11 @@ const styles = StyleSheet.create({
   playPreviewBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: RADIUS.full,
+    justifyContent: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     borderWidth: 1,
-    gap: 4,
   },
   playPreviewBtnText: {
     fontSize: 12,
@@ -817,6 +1233,19 @@ const styles = StyleSheet.create({
   },
   resultDownloadBtnText: {
     fontSize: 12,
+    fontWeight: '700',
+  },
+  statusBadgeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    gap: 3,
+  },
+  statusBadgeText: {
+    fontSize: 10.5,
     fontWeight: '700',
   },
   downloadsSection: {
@@ -852,5 +1281,49 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
     lineHeight: 18,
+  },
+  floatingBulkBarWrapper: {
+    position: 'absolute',
+    left: SPACING.md,
+    right: SPACING.md,
+    zIndex: 9999,
+  },
+  floatingBulkBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1.2,
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 10,
+  },
+  bulkBarLeft: {
+    flex: 1,
+  },
+  bulkBarCount: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  bulkBarSubtext: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  bulkDownloadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: RADIUS.full,
+    gap: 5,
+  },
+  bulkDownloadBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
   },
 });

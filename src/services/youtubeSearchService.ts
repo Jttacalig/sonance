@@ -1,5 +1,13 @@
 import { logger } from './loggerService';
 
+export type CompatibilityType =
+  | 'official_audio'
+  | 'music_video'
+  | 'lyrics'
+  | 'live'
+  | 'remix'
+  | 'standard';
+
 export interface SearchResultItem {
   id: string;
   title: string;
@@ -9,9 +17,74 @@ export interface SearchResultItem {
   thumbnailUrl: string;
   viewCount?: string;
   sourceUrl: string;
+  compatibilityType?: CompatibilityType;
+  badgeLabel?: string;
 }
 
 class YouTubeSearchService {
+  private detectCompatibility(rawTitle: string, rawArtist: string): { type: CompatibilityType; badge: string; score: number } {
+    const titleLower = rawTitle.toLowerCase();
+    const artistLower = rawArtist.toLowerCase();
+
+    // 1. Pristine Official Audio / Topic Release
+    if (
+      artistLower.includes('topic') ||
+      titleLower.includes('official audio') ||
+      titleLower.includes('(audio)') ||
+      titleLower.includes('[audio]') ||
+      titleLower.includes('audio track') ||
+      titleLower.includes('studio version')
+    ) {
+      return { type: 'official_audio', badge: 'Official Audio', score: 100 };
+    }
+
+    // 2. Official Music Video
+    if (
+      artistLower.includes('vevo') ||
+      titleLower.includes('official music video') ||
+      titleLower.includes('official video') ||
+      titleLower.includes('[official video]') ||
+      titleLower.includes('(official video)') ||
+      titleLower.includes('(music video)') ||
+      titleLower.includes('[music video]')
+    ) {
+      return { type: 'music_video', badge: 'Music Video', score: 85 };
+    }
+
+    // 3. Lyrics Video
+    if (
+      titleLower.includes('lyric video') ||
+      titleLower.includes('(lyrics)') ||
+      titleLower.includes('[lyrics]') ||
+      titleLower.includes('lyrics')
+    ) {
+      return { type: 'lyrics', badge: 'Lyrics', score: 70 };
+    }
+
+    // 4. Live / Acoustic
+    if (
+      titleLower.includes('live at') ||
+      titleLower.includes('(live)') ||
+      titleLower.includes('[live]') ||
+      titleLower.includes('acoustic') ||
+      titleLower.includes('unplugged') ||
+      titleLower.includes('concert')
+    ) {
+      return { type: 'live', badge: 'Live', score: 40 };
+    }
+
+    // 5. Remix
+    if (
+      titleLower.includes('remix') ||
+      titleLower.includes('club mix') ||
+      titleLower.includes('extended mix')
+    ) {
+      return { type: 'remix', badge: 'Remix', score: 50 };
+    }
+
+    return { type: 'standard', badge: 'Standard', score: 60 };
+  }
+
   private cleanSongTitle(raw: string): string {
     return raw
       .replace(/\(Official\s*(Music)?\s*Video\)/gi, '')
@@ -60,7 +133,7 @@ class YouTubeSearchService {
   }
 
   /**
-   * Searches YouTube music videos & tracks
+   * Searches YouTube music videos & tracks with smart audio compatibility ranking
    */
   async search(query: string): Promise<SearchResultItem[]> {
     const trimmed = query.trim();
@@ -96,7 +169,7 @@ class YouTubeSearchService {
         data.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents?.[0]?.itemSectionRenderer?.contents ||
         [];
 
-      const results: SearchResultItem[] = [];
+      const rawResults: Array<SearchResultItem & { score: number }> = [];
 
       for (const item of contents) {
         const vr = item.videoRenderer;
@@ -111,6 +184,9 @@ class YouTubeSearchService {
           vr.shortBylineText?.runs?.[0]?.text ||
           'Unknown Artist';
 
+        const originalTitle = rawTitle;
+        const originalArtist = rawArtist;
+
         if (rawTitle.includes(' - ')) {
           const split = rawTitle.split(' - ');
           if (split.length >= 2) {
@@ -121,8 +197,9 @@ class YouTubeSearchService {
 
         const thumbs = vr.thumbnail?.thumbnails || [];
         const bestThumb = thumbs.length > 0 ? thumbs[thumbs.length - 1].url : `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
+        const { type, badge, score } = this.detectCompatibility(originalTitle, originalArtist);
 
-        results.push({
+        rawResults.push({
           id: vr.videoId,
           title: this.cleanSongTitle(rawTitle) || 'Untitled Track',
           artist: this.cleanArtistName(rawArtist) || 'Unknown Artist',
@@ -131,10 +208,19 @@ class YouTubeSearchService {
           thumbnailUrl: bestThumb.startsWith('//') ? `https:${bestThumb}` : bestThumb,
           viewCount: vr.viewCountText?.simpleText || vr.shortViewCountText?.simpleText,
           sourceUrl: `https://www.youtube.com/watch?v=${vr.videoId}`,
+          compatibilityType: type,
+          badgeLabel: badge,
+          score,
         });
 
-        if (results.length >= 25) break;
+        if (rawResults.length >= 35) break;
       }
+
+      // Sort by compatibility score while preserving relevance
+      const results: SearchResultItem[] = rawResults
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 25)
+        .map(({ score, ...item }) => item);
 
       logger.search(`Found ${results.length} tracks for "${trimmed}"`);
       return results;
