@@ -29,21 +29,39 @@ jobs:
       - name: 🔨 Compile iOS Binary (Unsigned)
         run: |
           cd ios
+          pod install || true
+          
+          # Auto-detect workspace and scheme
+          WORKSPACE=$(ls -d *.xcworkspace 2>/dev/null | head -n 1)
+          
+          if [ -z "$WORKSPACE" ]; then
+            PROJECT=$(ls -d *.xcodeproj 2>/dev/null | head -n 1)
+            SCHEME=$(basename "$PROJECT" .xcodeproj)
+            BUILD_TARGET="-project $PROJECT"
+          else
+            SCHEME=$(basename "$WORKSPACE" .xcworkspace)
+            BUILD_TARGET="-workspace $WORKSPACE"
+          fi
+          
+          echo "Building Target: $BUILD_TARGET with Scheme: $SCHEME"
+          
           xcodebuild \
-            -workspace Sonance.xcworkspace \
-            -scheme Sonance \
+            $BUILD_TARGET \
+            -scheme "$SCHEME" \
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath ../build/Sonance.xcarchive \
             archive \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=""
+            CODE_SIGN_IDENTITY="" \
+            PROVISIONING_PROFILE="" \
+            CODE_SIGN_ENTITLEMENTS=""
 
       - name: 📦 Package .IPA for Sideloadly
         run: |
           mkdir -p build/Payload
-          cp -R build/Sonance.xcarchive/Products/Applications/Sonance.app build/Payload/
+          cp -R build/Sonance.xcarchive/Products/Applications/*.app build/Payload/
           cd build
           zip -r Sonance.ipa Payload
 
