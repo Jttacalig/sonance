@@ -3,6 +3,7 @@ import { createAudioPlayer } from 'expo-audio';
 import { DownloadItem, DownloadStatus, SourceType, Track } from '../types/music';
 import { storageService, MUSIC_DIR, ARTWORK_DIR } from './storageService';
 import { DEFAULT_COBALT_INSTANCES, AudioFormat } from '../constants/endpoints';
+import { logger } from './loggerService';
 
 export interface ExtractedInfo {
   title: string;
@@ -317,9 +318,11 @@ class DownloaderService {
     await storageService.initStorage();
 
     try {
+      logger.download(`Initiating download for: "${downloadItem.title}" (${preferredFormat.toUpperCase()})`);
       // 1. Resolve stream
       onStatusChange('resolving', `Extracting ${preferredFormat.toUpperCase()} stream...`);
       const { streamUrl, finalExtension } = await this.resolveAudioStreamUrl(downloadItem.url, preferredFormat);
+      logger.download(`Stream resolved successfully for "${downloadItem.title}"`);
 
       // 2. Prepare URL-safe file destination (no spaces or non-URL chars in file name)
       const trackId = `track_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
@@ -408,11 +411,14 @@ class DownloaderService {
 
       // 7. Save to library database
       await storageService.saveTrack(track);
+      const mbStr = track.fileSize ? (track.fileSize / 1024 / 1024).toFixed(1) : '0';
+      logger.download(`Download complete: "${track.title}" by ${track.artist} (${mbStr} MB)`);
       onStatusChange('completed', 'Saved to offline library!');
 
       return track;
     } catch (error: any) {
       this.activeDownloads.delete(downloadItem.id);
+      logger.error('DOWNLOAD', `Download failed for "${downloadItem.title}": ${error?.message || error}`);
       onStatusChange('error', error?.message || 'Download failed');
       throw error;
     }

@@ -1,3 +1,5 @@
+import { logger } from './loggerService';
+
 export interface SearchResultItem {
   id: string;
   title: string;
@@ -63,6 +65,8 @@ class YouTubeSearchService {
   async search(query: string): Promise<SearchResultItem[]> {
     const trimmed = query.trim();
     if (!trimmed) return [];
+
+    logger.search(`Searching music: "${trimmed}"`);
 
     try {
       const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(trimmed)}&sp=EgIQAQ%253D%253D`;
@@ -132,9 +136,10 @@ class YouTubeSearchService {
         if (results.length >= 25) break;
       }
 
+      logger.search(`Found ${results.length} tracks for "${trimmed}"`);
       return results;
-    } catch (error) {
-      console.warn('YouTube search scraping error:', error);
+    } catch (error: any) {
+      logger.error('SEARCH', `Search failed for "${trimmed}": ${error?.message || error}`);
       return [];
     }
   }

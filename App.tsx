@@ -39,6 +39,7 @@ import { PlaylistDetailScreen } from './src/screens/PlaylistDetailScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { MiniPlayer } from './src/components/MiniPlayer';
 import { FullPlayerModal } from './src/components/FullPlayerModal';
+import { logger } from './src/services/loggerService';
 import { Playlist } from './src/types/music';
 import { SPACING, RADIUS } from './src/constants/theme';
 
@@ -328,6 +329,10 @@ function MainNavigator() {
 }
 
 export default function App() {
+  useEffect(() => {
+    logger.init();
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

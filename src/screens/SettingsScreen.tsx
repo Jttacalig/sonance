@@ -24,6 +24,7 @@ import { SleepTimerModal } from '../components/SleepTimerModal';
 import { EqualizerModal } from '../components/EqualizerModal';
 import { PlayerBackgroundModal } from '../components/PlayerBackgroundModal';
 import { TransferConfirmationModal } from '../components/TransferConfirmationModal';
+import { DiagnosticsModal } from '../components/DiagnosticsModal';
 import { LiquidBackground } from '../components/LiquidBackground';
 import { AppSettings } from '../types/music';
 import { CandidateFile } from '../services/fileImportService';
@@ -47,6 +48,7 @@ export const SettingsScreen: React.FC = () => {
   const [showSleepModal, setShowSleepModal] = useState(false);
   const [showEqModal, setShowEqModal] = useState(false);
   const [showWallpaperModal, setShowWallpaperModal] = useState(false);
+  const [showDiagnosticsModal, setShowDiagnosticsModal] = useState(false);
 
   // Transfer Modal states
   const [candidateModalVisible, setCandidateModalVisible] = useState(false);
@@ -584,6 +586,30 @@ export const SettingsScreen: React.FC = () => {
                   <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Architecture</Text>
                   <Text style={[styles.infoValue, { color: colors.textPrimary }]}>Native iOS (React Native 0.86)</Text>
                 </View>
+
+                {/* Windows Console & Live Logs */}
+                <View style={[styles.cardDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]} />
+
+                <TouchableOpacity
+                  style={styles.settingRow}
+                  activeOpacity={0.75}
+                  onPress={() => setShowDiagnosticsModal(true)}
+                >
+                  <View style={styles.rowLeft}>
+                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(0, 242, 254, 0.14)' : 'rgba(0, 180, 216, 0.1)' }]}>
+                      <Ionicons name="terminal" size={17} color={colors.primary} />
+                    </View>
+                    <View>
+                      <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>
+                        Windows Console & Live Logs
+                      </Text>
+                      <Text style={[styles.rowSubtitle, { color: colors.textMuted }]}>
+                        Stream real-time diagnostics to Windows PC
+                      </Text>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
               </BlurView>
             </View>
           </View>
@@ -613,6 +639,11 @@ export const SettingsScreen: React.FC = () => {
           isTransferring={isTransferring}
           onConfirm={handleConfirmTransfer}
           onCancel={handleCancelTransfer}
+        />
+
+        <DiagnosticsModal
+          visible={showDiagnosticsModal}
+          onClose={() => setShowDiagnosticsModal(false)}
         />
       </SafeAreaView>
     </View>
