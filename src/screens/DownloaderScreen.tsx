@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useDownloads } from '../context/DownloadContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
@@ -26,6 +27,7 @@ import { DownloadCard } from '../components/DownloadCard';
 import { LiquidBackground } from '../components/LiquidBackground';
 import { AudioFormatModal } from '../components/AudioFormatModal';
 import { StoragePermissionModal } from '../components/StoragePermissionModal';
+import { MusicVideoModal } from '../components/MusicVideoModal';
 import { SPACING, RADIUS } from '../constants/theme';
 import { QUICK_SEARCH_CHIPS, AudioFormat } from '../constants/endpoints';
 
@@ -39,6 +41,10 @@ export const DownloaderScreen: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Embedded Video/Stream Modal state
+  const [previewVideoItem, setPreviewVideoItem] = useState<SearchResultItem | null>(null);
+  const [isVideoModalVisible, setIsVideoModalVisible] = useState(false);
 
   // Audio Format Modal state
   const [selectedTrackForFormat, setSelectedTrackForFormat] = useState<ExtractedInfo | null>(null);
@@ -72,7 +78,19 @@ export const DownloaderScreen: React.FC = () => {
     handleSearch(chipQuery);
   };
 
+  // Open embedded video / audio stream player
+  const handleOpenStreamPreview = (item: SearchResultItem) => {
+    if (Haptics.impactAsync) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+    setPreviewVideoItem(item);
+    setIsVideoModalVisible(true);
+  };
+
   const handleOpenFormatModalForSearchResult = (item: SearchResultItem) => {
+    if (Haptics.impactAsync) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
     const info: ExtractedInfo = {
       title: item.title,
       artist: item.artist,
@@ -187,7 +205,7 @@ export const DownloaderScreen: React.FC = () => {
                 <Ionicons name="search" size={20} color={colors.primary} />
                 <TextInput
                   style={[styles.searchInput, { color: colors.textPrimary }]}
-                  placeholder="Search song, artist, album, or track..."
+                  placeholder="Search song, artist, album, or paste URL..."
                   placeholderTextColor={colors.textMuted}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
@@ -230,7 +248,7 @@ export const DownloaderScreen: React.FC = () => {
                   ) : (
                     <>
                       <Ionicons name="search" size={16} color="#FFF" />
-                      <Text style={styles.searchSubmitText}>Add Music</Text>
+                      <Text style={styles.searchSubmitText}>Search Music</Text>
                     </>
                   )}
                 </LinearGradient>
@@ -279,7 +297,7 @@ export const DownloaderScreen: React.FC = () => {
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.primary} />
                 <Text style={[styles.loadingText, { color: colors.textMuted }]}>
-                  Searching high-quality music streams...
+                  Searching music tracks...
                 </Text>
               </View>
             ) : searchResults.length > 0 ? (
@@ -304,21 +322,32 @@ export const DownloaderScreen: React.FC = () => {
                       },
                     ]}
                   >
-                    {/* Thumbnail with duration badge */}
-                    <View style={styles.resultThumbContainer}>
+                    {/* Thumbnail with duration badge & tap to play video preview */}
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => handleOpenStreamPreview(item)}
+                      style={styles.resultThumbContainer}
+                    >
                       <Image
                         source={{ uri: item.thumbnailUrl }}
                         style={styles.resultThumb}
                       />
+                      <View style={styles.thumbPlayOverlay}>
+                        <Ionicons name="play-circle" size={24} color="#FFF" />
+                      </View>
                       {item.duration && (
                         <View style={styles.resultDurationBadge}>
                           <Text style={styles.resultDurationText}>{item.duration}</Text>
                         </View>
                       )}
-                    </View>
+                    </TouchableOpacity>
 
-                    {/* Title & Artist */}
-                    <View style={styles.resultInfo}>
+                    {/* Title & Artist (Tap to Play Preview) */}
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => handleOpenStreamPreview(item)}
+                      style={styles.resultInfo}
+                    >
                       <Text
                         style={[styles.resultTitle, { color: colors.textPrimary }]}
                         numberOfLines={2}
@@ -339,29 +368,54 @@ export const DownloaderScreen: React.FC = () => {
                           {item.viewCount}
                         </Text>
                       )}
-                    </View>
-
-                    {/* Frosted Glass Download Button */}
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => handleOpenFormatModalForSearchResult(item)}
-                      style={[
-                        styles.resultDownloadBtn,
-                        {
-                          backgroundColor: isDark
-                            ? 'rgba(255, 51, 92, 0.18)'
-                            : 'rgba(255, 46, 85, 0.12)',
-                          borderColor: isDark
-                            ? 'rgba(255, 51, 92, 0.4)'
-                            : 'rgba(255, 46, 85, 0.3)',
-                        },
-                      ]}
-                    >
-                      <Ionicons name="arrow-down" size={18} color={colors.primary} />
-                      <Text style={[styles.resultDownloadBtnText, { color: colors.primary }]}>
-                        Format
-                      </Text>
                     </TouchableOpacity>
+
+                    {/* Action Buttons: [ ▶ Play ] + [ ⬇ Save ] */}
+                    <View style={styles.resultActions}>
+                      {/* Play Preview Button */}
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => handleOpenStreamPreview(item)}
+                        style={[
+                          styles.playPreviewBtn,
+                          {
+                            backgroundColor: isDark
+                              ? 'rgba(255, 255, 255, 0.08)'
+                              : 'rgba(235, 240, 248, 0.9)',
+                            borderColor: isDark
+                              ? 'rgba(255, 255, 255, 0.16)'
+                              : 'rgba(200, 212, 228, 0.6)',
+                          },
+                        ]}
+                      >
+                        <Ionicons name="play" size={13} color={colors.primary} />
+                        <Text style={[styles.playPreviewBtnText, { color: colors.primary }]}>
+                          Play
+                        </Text>
+                      </TouchableOpacity>
+
+                      {/* Save / Download Button */}
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => handleOpenFormatModalForSearchResult(item)}
+                        style={[
+                          styles.resultDownloadBtn,
+                          {
+                            backgroundColor: isDark
+                              ? 'rgba(255, 51, 92, 0.18)'
+                              : 'rgba(255, 46, 85, 0.12)',
+                            borderColor: isDark
+                              ? 'rgba(255, 51, 92, 0.4)'
+                              : 'rgba(255, 46, 85, 0.3)',
+                          },
+                        ]}
+                      >
+                        <Ionicons name="arrow-down" size={13} color={colors.primary} />
+                        <Text style={[styles.resultDownloadBtnText, { color: colors.primary }]}>
+                          Save
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 ))}
               </View>
@@ -414,7 +468,7 @@ export const DownloaderScreen: React.FC = () => {
               >
                 <Ionicons name="cloud-download-outline" size={36} color={colors.textMuted} />
                 <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-                  No active or recent songs. Search and add music above for offline playback!
+                  No active or recent downloads. Search and download music above for offline playback!
                 </Text>
               </View>
             ) : (
@@ -430,6 +484,21 @@ export const DownloaderScreen: React.FC = () => {
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* Embedded Music Video & Stream Preview Modal */}
+      <MusicVideoModal
+        visible={isVideoModalVisible}
+        item={previewVideoItem}
+        onClose={() => {
+          setIsVideoModalVisible(false);
+          setPreviewVideoItem(null);
+        }}
+        onSaveOffline={(extractedInfo) => {
+          setIsVideoModalVisible(false);
+          setSelectedTrackForFormat(extractedInfo);
+          setIsFormatModalVisible(true);
+        }}
+      />
 
       {/* Audio Format Selection Modal */}
       <AudioFormatModal
@@ -459,98 +528,95 @@ export const DownloaderScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    position: 'relative',
   },
   scrollContent: {
-    paddingHorizontal: SPACING.lg,
+    paddingHorizontal: SPACING.md,
     paddingTop: SPACING.md,
-    paddingBottom: 180,
+    paddingBottom: 140,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: SPACING.md,
   },
   titleWithBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.5,
+    fontWeight: '900',
+    letterSpacing: -0.6,
   },
   adFreeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: SPACING.sm + 4,
-    paddingVertical: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: RADIUS.full,
     borderWidth: 1,
+    gap: 4,
   },
   adFreeText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   searchGlassCard: {
-    borderRadius: RADIUS.clay,
-    borderWidth: 1.5,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1.2,
     overflow: 'hidden',
-    marginBottom: SPACING.md,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
+    marginBottom: SPACING.lg,
   },
   searchBlur: {
-    padding: SPACING.md + 2,
-    overflow: 'hidden',
+    padding: SPACING.md,
+    borderRadius: RADIUS.lg,
   },
   searchInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
-    borderWidth: 1.2,
-    marginBottom: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    paddingHorizontal: SPACING.sm + 4,
+    height: 48,
+    marginBottom: SPACING.sm + 4,
   },
   searchInput: {
     flex: 1,
-    marginLeft: SPACING.sm,
     fontSize: 14,
     fontWeight: '500',
+    marginLeft: SPACING.xs + 2,
+    paddingVertical: 0,
   },
   clearBtn: {
-    padding: 2,
+    padding: 4,
   },
   searchSubmitWrapper: {
-    borderRadius: RADIUS.full,
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
   },
   searchSubmitBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.full,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
+    height: 44,
+    borderRadius: RADIUS.md,
+    gap: 6,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
     elevation: 4,
-  },
-  searchSubmitText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#FFF',
   },
   disabledBtn: {
     opacity: 0.5,
+  },
+  searchSubmitText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   chipsSection: {
     marginBottom: SPACING.lg,
@@ -558,25 +624,31 @@ const styles = StyleSheet.create({
   chipsHeading: {
     fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: 1.0,
     marginBottom: SPACING.xs + 2,
   },
   chipsScroll: {
-    gap: SPACING.sm,
-    paddingVertical: 2,
+    gap: 8,
+    paddingVertical: 4,
   },
   quickChip: {
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: RADIUS.full,
-    borderWidth: 1.2,
+    borderWidth: 1,
   },
   quickChipText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   resultsSection: {
     marginBottom: SPACING.lg,
+  },
+  resultsCountHeader: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: SPACING.xs + 4,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -586,38 +658,38 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 13,
-    fontWeight: '600',
-  },
-  resultsCountHeader: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    marginBottom: SPACING.sm,
+    fontWeight: '500',
   },
   resultsList: {
-    gap: SPACING.sm + 2,
+    gap: 10,
   },
   resultCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: SPACING.sm + 2,
-    borderRadius: RADIUS.xl,
+    padding: 10,
+    borderRadius: RADIUS.md,
     borderWidth: 1.2,
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.15,
     shadowRadius: 6,
-    elevation: 2,
+    elevation: 3,
   },
   resultThumbContainer: {
     position: 'relative',
-    width: 68,
-    height: 68,
-    borderRadius: RADIUS.md,
+    width: 62,
+    height: 62,
+    borderRadius: RADIUS.sm,
     overflow: 'hidden',
   },
   resultThumb: {
     width: '100%',
     height: '100%',
+  },
+  thumbPlayOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   resultDurationBadge: {
     position: 'absolute',
@@ -625,76 +697,97 @@ const styles = StyleSheet.create({
     right: 3,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
     paddingHorizontal: 4,
-    paddingVertical: 1,
+    paddingVertical: 1.5,
     borderRadius: 3,
   },
   resultDurationText: {
-    fontSize: 9,
-    fontWeight: '800',
     color: '#FFF',
+    fontSize: 9,
+    fontWeight: '700',
   },
   resultInfo: {
     flex: 1,
-    marginLeft: SPACING.md,
-    marginRight: SPACING.sm,
+    marginLeft: SPACING.sm + 2,
+    marginRight: SPACING.xs,
+    justifyContent: 'center',
   },
   resultTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
-    lineHeight: 18,
     marginBottom: 2,
   },
   resultArtist: {
     fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 2,
+    fontWeight: '500',
+    marginBottom: 1,
   },
   resultViews: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 10,
+    fontWeight: '400',
+  },
+  resultActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  playPreviewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    gap: 4,
+  },
+  playPreviewBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   resultDownloadBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     borderRadius: RADIUS.full,
-    borderWidth: 1.2,
+    borderWidth: 1,
+    gap: 3,
   },
   resultDownloadBtnText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   downloadsSection: {
-    marginTop: SPACING.xs,
+    marginTop: SPACING.sm,
   },
   sectionHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: SPACING.sm,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
+    letterSpacing: -0.3,
   },
   clearCompletedText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
   },
   emptyBox: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: SPACING.xl,
-    borderRadius: RADIUS.clay,
-    borderWidth: 1.4,
-    gap: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    gap: SPACING.xs,
   },
   emptyText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     textAlign: 'center',
-    paddingHorizontal: SPACING.lg,
+    lineHeight: 18,
   },
 });

@@ -223,26 +223,32 @@ class DownloaderService {
           'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15',
           'Accept': 'application/json',
         },
-      }, 5000);
+      }, 6000);
 
       if (initRes.ok) {
         const initData = await initRes.json();
-        if (initData.download_url) {
-          return { streamUrl: initData.download_url, filename: initData.title, finalExtension };
+        if (initData.download_url && typeof initData.download_url === 'string' && initData.download_url.trim().length > 0) {
+          return { streamUrl: initData.download_url.trim(), filename: initData.title, finalExtension };
         }
         if (initData.progress_url) {
-          // Poll progress for audio conversion (up to 12 attempts = ~15s max)
-          for (let attempt = 0; attempt < 12; attempt++) {
-            await new Promise(r => setTimeout(r, 1200));
+          // Poll progress for audio conversion
+          for (let attempt = 0; attempt < 15; attempt++) {
+            await new Promise(r => setTimeout(r, 1000));
             try {
-              const pollRes = await this.fetchWithTimeout(initData.progress_url, {}, 4000);
+              const pollRes = await this.fetchWithTimeout(initData.progress_url, {
+                headers: {
+                  'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15',
+                  'Accept': 'application/json',
+                },
+              }, 4000);
               if (pollRes.ok) {
                 const pollData = await pollRes.json();
-                if (pollData.download_url) {
-                  return { streamUrl: pollData.download_url, filename: pollData.title || initData.title, finalExtension };
-                }
-                if (pollData.success === 1 && pollData.download_url) {
-                  return { streamUrl: pollData.download_url, filename: pollData.title, finalExtension };
+                if (pollData.download_url && typeof pollData.download_url === 'string' && pollData.download_url.trim().length > 0) {
+                  return {
+                    streamUrl: pollData.download_url.trim(),
+                    filename: pollData.title || initData.title,
+                    finalExtension,
+                  };
                 }
               }
             } catch (pollErr) {
