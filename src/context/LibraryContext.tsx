@@ -30,6 +30,7 @@ interface LibraryContextType {
   pickCandidateFiles: () => Promise<CandidatePickResult>;
   scanCandidateFiles: () => Promise<CandidateScanResult>;
   transferCandidateFiles: (candidates: CandidateFile[]) => Promise<Track[]>;
+  cleanupCandidateFiles: (candidates: CandidateFile[]) => Promise<void>;
 }
 
 const LibraryContext = createContext<LibraryContextType | null>(null);
@@ -127,6 +128,10 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return importedTracks;
   };
 
+  const cleanupCandidateFiles = async (candidates: CandidateFile[]): Promise<void> => {
+    await fileImportService.cleanupCandidateFiles(candidates);
+  };
+
   const importFromFiles = async (): Promise<ImportResult> => {
     const result = await fileImportService.pickAndImportAudioFiles();
     if (result.importedCount > 0) {
@@ -167,6 +172,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         pickCandidateFiles,
         scanCandidateFiles,
         transferCandidateFiles,
+        cleanupCandidateFiles,
       }}
     >
       {children}

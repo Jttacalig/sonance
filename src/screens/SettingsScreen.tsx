@@ -14,6 +14,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
 import { useTheme, ThemeMode } from '../context/ThemeContext';
@@ -38,6 +39,7 @@ export const SettingsScreen: React.FC = () => {
     scanCandidateFiles,
     pickCandidateFiles,
     transferCandidateFiles,
+    cleanupCandidateFiles,
   } = useLibrary();
   const { sleepTimerMinutes } = usePlayer();
   const { colors, isDark, mode, setMode, accentId, setAccent } = useTheme();
@@ -88,6 +90,16 @@ export const SettingsScreen: React.FC = () => {
         {
           text: 'Clean Now',
           onPress: async () => {
+            if (FileSystem.cacheDirectory) {
+              try {
+                const cacheFiles = await FileSystem.readDirectoryAsync(FileSystem.cacheDirectory);
+                for (const f of cacheFiles) {
+                  await FileSystem.deleteAsync(`${FileSystem.cacheDirectory}${f}`, { idempotent: true });
+                }
+              } catch (e) {
+                console.warn('Error clearing cache directory:', e);
+              }
+            }
             await refreshLibrary();
             Alert.alert('Done', 'Cache cleared successfully.');
           },
@@ -163,6 +175,9 @@ export const SettingsScreen: React.FC = () => {
   };
 
   const handleCancelTransfer = () => {
+    if (candidates.length > 0) {
+      cleanupCandidateFiles(candidates);
+    }
     setCandidateModalVisible(false);
     setCandidates([]);
     setCandidateSkippedCount(0);

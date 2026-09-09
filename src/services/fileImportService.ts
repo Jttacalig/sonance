@@ -171,6 +171,14 @@ class FileImportService {
         if (isDup) {
           skippedCount++;
           skippedTitles.push(title);
+          if (
+            asset.uri &&
+            (asset.uri.includes('Cache') ||
+              asset.uri.includes('cache') ||
+              asset.uri.includes('DocumentPicker'))
+          ) {
+            FileSystem.deleteAsync(asset.uri, { idempotent: true }).catch(() => {});
+          }
         } else {
           candidates.push({
             sourceUri: asset.uri,
@@ -348,7 +356,26 @@ class FileImportService {
   }
 
   /**
+   * Cleans up temporary files (e.g. from DocumentPicker cache) if user cancels transfer
+   */
+  async cleanupCandidateFiles(candidates: CandidateFile[]): Promise<void> {
+    for (const c of candidates) {
+      if (
+        c.sourceUri &&
+        (c.sourceUri.includes('Cache') ||
+          c.sourceUri.includes('cache') ||
+          c.sourceUri.includes('DocumentPicker'))
+      ) {
+        try {
+          await FileSystem.deleteAsync(c.sourceUri, { idempotent: true });
+        } catch {}
+      }
+    }
+  }
+
+  /**
    * Imports a single audio file URI into the local app storage (Sonance Music Folder)
+   * Moves the file from source into the Sonance folder so no duplicate files linger on device.
    */
   async importSingleFile(sourceUri: string, originalName: string, estimatedSize?: number): Promise<Track | null> {
     const trackId = `import_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -358,15 +385,27 @@ class FileImportService {
     const safeTitle = title.replace(/[\/\\:*?"<>|]/g, '').substring(0, 40);
     const destUri = `${MUSIC_DIR}${trackId}_${safeTitle}.${ext}`;
 
-    // Copy to permanent app documents directory if source is external/cached
+    // Transfer to permanent app documents directory if source is external/cached
     if (sourceUri !== destUri) {
       try {
-        await FileSystem.copyAsync({
+        // Try move first: instant and leaves 0 duplicates
+        await FileSystem.moveAsync({
           from: sourceUri,
           to: destUri,
         });
-      } catch (e) {
-        console.warn('Copy file warning:', e);
+      } catch (moveErr) {
+        // Fallback: copy and clean up source file
+        try {
+          await FileSystem.copyAsync({
+            from: sourceUri,
+            to: destUri,
+          });
+          try {
+            await FileSystem.deleteAsync(sourceUri, { idempotent: true });
+          } catch {}
+        } catch (copyErr) {
+          console.warn('File transfer warning:', copyErr);
+        }
       }
     }
 

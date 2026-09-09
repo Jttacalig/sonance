@@ -100,7 +100,7 @@ export const TransferConfirmationModal: React.FC<TransferConfirmationModalProps>
                 {/* Subtitle */}
                 <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                   {sourceType === 'autoscan'
-                    ? `Found ${candidates.length} new audio track(s). These songs will be copied and organized into your dedicated Sonance Music Folder for offline playback.`
+                    ? `Found ${candidates.length} new audio track(s). These songs will be transferred and organized into your dedicated Sonance Music Folder for offline playback.`
                     : `${candidates.length} song(s) will be transferred and saved into your dedicated Sonance Music Folder for offline playback.`}
                 </Text>
 

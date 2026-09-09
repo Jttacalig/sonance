@@ -44,6 +44,7 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
     scanCandidateFiles,
     pickCandidateFiles,
     transferCandidateFiles,
+    cleanupCandidateFiles,
   } = useLibrary();
   const { currentTrack, isPlaying, playTrack } = usePlayer();
   const { colors, isDark } = useTheme();
@@ -175,6 +176,9 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
   };
 
   const handleCancelTransfer = () => {
+    if (candidates.length > 0) {
+      cleanupCandidateFiles(candidates);
+    }
     setCandidateModalVisible(false);
     setCandidates([]);
     setCandidateSkippedCount(0);
