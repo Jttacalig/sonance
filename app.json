@@ -2,7 +2,7 @@
   "expo": {
     "name": "Sonance",
     "slug": "apple-player",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.jhet.sonance",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "infoPlist": {
         "UIBackgroundModes": [
           "audio"
@@ -61,7 +61,9 @@
         "expo-build-properties",
         {
           "ios": {
-            "deploymentTarget": "16.4"
+            "deploymentTarget": "16.4",
+            "useFrameworks": "static",
+            "usePrecompiledModules": false
           }
         }
       ],
