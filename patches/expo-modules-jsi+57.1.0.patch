@@ -21,24 +21,48 @@ index 6115e87..957527c 100644
    RuntimeScheduler(const RuntimeScheduler &) = delete;
  
 diff --git a/node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Runtime/JavaScriptRuntime.swift b/node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Runtime/JavaScriptRuntime.swift
-index 3d796ee..3a93242 100644
+index 3d796ee..fab2c85 100644
 --- a/node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Runtime/JavaScriptRuntime.swift
 +++ b/node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Runtime/JavaScriptRuntime.swift
-@@ -185,11 +185,12 @@ open class JavaScriptRuntime: Equatable, Identifiable, @unchecked Sendable {
+@@ -4,6 +4,22 @@ internal import ExpoModulesJSI_Cxx
+ import Foundation
+ internal import jsi
+ 
++private struct SendableValuePointer: @unchecked Sendable {
++  let pointer: UnsafePointer<facebook.jsi.Value>?
++
++  init(_ pointer: UnsafePointer<facebook.jsi.Value>) {
++    self.pointer = UInt(bitPattern: pointer) != 0 ? pointer : nil
++  }
++}
++
++private struct SendableMutableValuePointer: @unchecked Sendable {
++  let pointer: UnsafeMutablePointer<facebook.jsi.Value>
++
++  init(_ pointer: UnsafeMutablePointer<facebook.jsi.Value>) {
++    self.pointer = pointer
++  }
++}
++
+ /// A Swift wrapper around a JavaScript runtime. Provides access to a JavaScript execution environment, allowing you to evaluate
+ /// JavaScript code, create and manipulate JavaScript objects, functions, and values, and bridge between Swift and JavaScript.
+ ///
+@@ -185,12 +201,12 @@ open class JavaScriptRuntime: Equatable, Identifiable, @unchecked Sendable {
        resultPtr: UnsafeMutablePointer<facebook.jsi.Value>
      ) -> Bool {
        let propertyName = String(cString: propertyName)
 -      nonisolated(unsafe) let resultPtr = resultPtr
-+      let resultAddress = UInt(bitPattern: resultPtr)
++      let sendableResult = SendableMutableValuePointer(resultPtr)
  
        return withGuaranteedContext(context) { (context: HostObjectContext, runtime) in
          return JavaScriptActor.assumeIsolated {
            return forwardingSwiftErrorsToJS(runtime: runtime) {
-+            let resultPtr = UnsafeMutablePointer<facebook.jsi.Value>(bitPattern: resultAddress)!
-             try context.get(propertyName).writeJSIValue(to: resultPtr)
+-            try context.get(propertyName).writeJSIValue(to: resultPtr)
++            try context.get(propertyName).writeJSIValue(to: sendableResult.pointer)
            }
          }
-@@ -765,24 +766,19 @@ private func createFunctionClosure(
+       }
+@@ -765,28 +781,20 @@ private func createFunctionClosure(
      argumentsCount: Int,
      resultPtr: UnsafeMutablePointer<facebook.jsi.Value>
    ) -> Bool {
@@ -54,23 +78,26 @@ index 3d796ee..3a93242 100644
 -    nonisolated(unsafe) let thisPtr = thisPtr
 -    nonisolated(unsafe) let argumentsPtr = argumentsPtr
 -    nonisolated(unsafe) let resultPtr = resultPtr
-+    let thisAddress = UInt(bitPattern: thisPtr)
-+    let argumentsAddress = UInt(bitPattern: argumentsPtr)
-+    let resultAddress = UInt(bitPattern: resultPtr)
++    let sendableThis = SendableValuePointer(thisPtr)
++    let sendableArgs = SendableValuePointer(argumentsPtr)
++    let sendableResult = SendableMutableValuePointer(resultPtr)
  
      // See `withGuaranteedContext` for why neither the context nor the runtime is retained here, and
      // why the result is written to the caller's slot instead of being returned.
      return withGuaranteedContext(context) { (context: HostFunctionContext, runtime) in
        return JavaScriptActor.assumeIsolated {
          return forwardingSwiftErrorsToJS(runtime: runtime) {
-+          let thisPtr = UnsafePointer<facebook.jsi.Value>(bitPattern: thisAddress)!
-+          let argumentsPtr = UnsafePointer<facebook.jsi.Value>(bitPattern: argumentsAddress)!
-+          let resultPtr = UnsafeMutablePointer<facebook.jsi.Value>(bitPattern: resultAddress)!
-+
++          guard let thisPtr = sendableThis.pointer else { return }
            let this = UnsafeMutablePointer(mutating: thisPtr).move()
-           let arguments = JavaScriptValuesBuffer(runtime, start: argumentsPtr, count: argumentsCount)
+-          let arguments = JavaScriptValuesBuffer(runtime, start: argumentsPtr, count: argumentsCount)
++          let arguments = JavaScriptValuesBuffer(runtime, start: sendableArgs.pointer, count: argumentsCount)
            let thisValue = JavaScriptValue(runtime, this)
-@@ -812,20 +808,19 @@ private func createFunctionClosure(
+-          try context.call(thisValue, consume arguments).writeJSIValue(to: resultPtr)
++          try context.call(thisValue, consume arguments).writeJSIValue(to: sendableResult.pointer)
+         }
+       }
+     }
+@@ -812,23 +820,19 @@ private func createFunctionClosure(
      argumentsCount: Int,
      resultPtr: UnsafeMutablePointer<facebook.jsi.Value>
    ) -> Bool {
@@ -82,19 +109,21 @@ index 3d796ee..3a93242 100644
 -    nonisolated(unsafe) let thisPtr = thisPtr
 -    nonisolated(unsafe) let argumentsPtr = argumentsPtr
 -    nonisolated(unsafe) let resultPtr = resultPtr
-+    let thisAddress = UInt(bitPattern: thisPtr)
-+    let argumentsAddress = UInt(bitPattern: argumentsPtr)
-+    let resultAddress = UInt(bitPattern: resultPtr)
++    let sendableThis = SendableValuePointer(thisPtr)
++    let sendableArgs = SendableValuePointer(argumentsPtr)
++    let sendableResult = SendableMutableValuePointer(resultPtr)
  
      // See `withGuaranteedContext` for why neither the context nor the runtime is retained here, and
      // why the result is written to the caller's slot instead of being returned.
      return withGuaranteedContext(context) { (context: UnownedThisHostFunctionContext, runtime) in
        return JavaScriptActor.assumeIsolated {
          return forwardingSwiftErrorsToJS(runtime: runtime) {
-+          let thisPtr = UnsafePointer<facebook.jsi.Value>(bitPattern: thisAddress)!
-+          let argumentsPtr = UnsafePointer<facebook.jsi.Value>(bitPattern: argumentsAddress)!
-+          let resultPtr = UnsafeMutablePointer<facebook.jsi.Value>(bitPattern: resultAddress)!
-+
-           let arguments = JavaScriptValuesBuffer(runtime, start: argumentsPtr, count: argumentsCount)
+-          let arguments = JavaScriptValuesBuffer(runtime, start: argumentsPtr, count: argumentsCount)
++          guard let thisPtr = sendableThis.pointer else { return }
++          let arguments = JavaScriptValuesBuffer(runtime, start: sendableArgs.pointer, count: argumentsCount)
            let thisValue = JavaScriptUnownedValue(runtime.pointee, thisPtr)
-           try context.call(thisValue, consume arguments).writeJSIValue(to: resultPtr)
+-          try context.call(thisValue, consume arguments).writeJSIValue(to: resultPtr)
++          try context.call(thisValue, consume arguments).writeJSIValue(to: sendableResult.pointer)
+         }
+       }
+     }
