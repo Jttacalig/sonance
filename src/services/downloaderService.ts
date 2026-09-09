@@ -319,6 +319,29 @@ class DownloaderService {
   }
 
   /**
+   * Helper to find the clean official Audio/Topic release if a VEVO video is stream-restricted
+   */
+  async findTopicAudioUrl(title: string, artist: string): Promise<string | null> {
+    try {
+      const q = `${title} ${artist} Audio Topic`.trim();
+      const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
+      const res = await this.fetchWithTimeout(searchUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+      }, 5000);
+      if (res.ok) {
+        const html = await res.text();
+        const matches = [...html.matchAll(/\/watch\?v=([a-zA-Z0-9_-]{11})/g)];
+        if (matches && matches.length > 0) {
+          return `https://www.youtube.com/watch?v=${matches[0][1]}`;
+        }
+      }
+    } catch (e) {
+      console.warn('Fallback search error:', e);
+    }
+    return null;
+  }
+
+  /**
    * Starts downloading track to local disk and returns Track object
    */
   async startDownload(
@@ -401,25 +424,61 @@ class DownloaderService {
       const result = await downloadResumable.downloadAsync();
       this.activeDownloads.delete(downloadItem.id);
 
-      if (!result || !result.uri || (result.status && result.status >= 400)) {
+      // Verify file integrity
+      let fileInfo = await FileSystem.getInfoAsync(destinationFile);
+      let isValidAudio = fileInfo.exists && fileInfo.size !== undefined && fileInfo.size >= 50 * 1024;
+
+      // If primary video returned empty stream (common for VEVO/protected videos), auto fallback to Topic/Audio release
+      if (!isValidAudio) {
         try {
           await FileSystem.deleteAsync(destinationFile, { idempotent: true });
         } catch {}
-        throw new Error(`Download failed with server status ${result?.status || 'network error'}.`);
+
+        onStatusChange('resolving', 'Resolving clean audio master stream...');
+        const fallbackUrl = await this.findTopicAudioUrl(downloadItem.title, downloadItem.artist);
+        if (fallbackUrl && fallbackUrl !== downloadItem.url) {
+          const fallbackStream = await this.resolveAudioStreamUrl(fallbackUrl, preferredFormat);
+          const fallbackResumable = FileSystem.createDownloadResumable(
+            fallbackStream.streamUrl,
+            destinationFile,
+            {
+              headers: {
+                'User-Agent': DEFAULT_USER_AGENT,
+                'Accept': '*/*',
+              },
+            },
+            (downloadProgress) => {
+              lastBytesWritten = downloadProgress.totalBytesWritten;
+              lastExpectedBytes = downloadProgress.totalBytesExpectedToWrite > 0
+                ? downloadProgress.totalBytesExpectedToWrite
+                : Math.max(estimatedTotalBytes, lastBytesWritten * 1.15);
+              const fileRatio = lastExpectedBytes > 0 ? Math.min(1.0, lastBytesWritten / lastExpectedBytes) : 0;
+              onProgress(Math.min(0.92, 0.35 + fileRatio * 0.57), lastBytesWritten, lastExpectedBytes);
+            }
+          );
+          this.activeDownloads.set(downloadItem.id, fallbackResumable);
+          const fbResult = await fallbackResumable.downloadAsync();
+          this.activeDownloads.delete(downloadItem.id);
+
+          if (fbResult && fbResult.uri) {
+            fileInfo = await FileSystem.getInfoAsync(fbResult.uri);
+            if (fileInfo.exists && fileInfo.size && fileInfo.size >= 50 * 1024) {
+              isValidAudio = true;
+            }
+          }
+        }
       }
 
-      // Verify file integrity
-      const fileInfo = await FileSystem.getInfoAsync(result.uri);
-      if (!fileInfo.exists || !fileInfo.size || fileInfo.size < 50 * 1024) {
+      if (!isValidAudio) {
         try {
-          await FileSystem.deleteAsync(result.uri, { idempotent: true });
+          await FileSystem.deleteAsync(destinationFile, { idempotent: true });
         } catch {}
-        throw new Error('Downloaded audio stream was incomplete or empty. Please try again.');
+        throw new Error('Audio stream was incomplete. Please try another search result for this song.');
       }
 
       // Check for HTML error payload
       try {
-        const headerSample = await FileSystem.readAsStringAsync(result.uri, {
+        const headerSample = await FileSystem.readAsStringAsync(destinationFile, {
           encoding: FileSystem.EncodingType.UTF8,
           length: 150,
         });
@@ -430,7 +489,7 @@ class DownloaderService {
           headerSample.includes('{"error"')
         ) {
           try {
-            await FileSystem.deleteAsync(result.uri, { idempotent: true });
+            await FileSystem.deleteAsync(destinationFile, { idempotent: true });
           } catch {}
           throw new Error('Audio stream returned an error response from server. Please retry.');
         }
@@ -461,10 +520,10 @@ class DownloaderService {
 
       // 5. Measure and probe audio duration
       let duration = downloadItem.duration || 180;
-      let fileSize = fileInfo.size || lastBytesWritten || 0;
+      let fileSize = (fileInfo.exists ? fileInfo.size : 0) || lastBytesWritten || 0;
 
       try {
-        const probePlayer = createAudioPlayer(result.uri);
+        const probePlayer = createAudioPlayer(destinationFile);
         if (probePlayer.duration && probePlayer.duration > 0) {
           duration = Math.round(probePlayer.duration);
         }
@@ -479,7 +538,7 @@ class DownloaderService {
         title: downloadItem.title,
         artist: downloadItem.artist,
         duration: duration || 180,
-        uri: result.uri,
+        uri: destinationFile,
         artworkUri: localArtworkUri,
         sourceUrl: downloadItem.url,
         sourceType: this.detectSourceType(downloadItem.url),
