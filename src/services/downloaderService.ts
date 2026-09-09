@@ -2,7 +2,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { createAudioPlayer } from 'expo-audio';
 import { DownloadItem, DownloadStatus, SourceType, Track } from '../types/music';
 import { storageService, MUSIC_DIR, ARTWORK_DIR } from './storageService';
-import { DEFAULT_COBALT_INSTANCES, AudioFormat } from '../constants/endpoints';
+import { DEFAULT_COBALT_INSTANCES, AudioFormat, DEFAULT_USER_AGENT } from '../constants/endpoints';
 import { logger } from './loggerService';
 
 export interface ExtractedInfo {
@@ -223,10 +223,10 @@ class DownloaderService {
       const initUrl = `https://loader.to/ajax/download.php?button=1&start=1&end=1&format=${formatParam}&url=${encodeURIComponent(url)}`;
       const initRes = await this.fetchWithTimeout(initUrl, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15',
+          'User-Agent': DEFAULT_USER_AGENT,
           'Accept': 'application/json',
         },
-      }, 6000);
+      }, 7000);
 
       if (initRes.ok) {
         const initData = await initRes.json();
@@ -235,18 +235,18 @@ class DownloaderService {
           return { streamUrl: initData.download_url.trim(), filename: initData.title, finalExtension };
         }
         if (initData.progress_url) {
-          // Poll progress for audio conversion
-          for (let attempt = 0; attempt < 20; attempt++) {
-            const stepPct = 0.08 + Math.min(0.25, ((attempt + 1) / 20) * 0.25);
-            onProgress?.(stepPct, 'Converting audio to high-quality format...');
+          // Poll progress for audio conversion (up to 45 seconds for full audio encoding)
+          for (let attempt = 0; attempt < 45; attempt++) {
+            const stepPct = 0.08 + Math.min(0.25, ((attempt + 1) / 45) * 0.25);
+            onProgress?.(stepPct, 'Converting audio to high-fidelity format...');
             await new Promise(r => setTimeout(r, 1000));
             try {
               const pollRes = await this.fetchWithTimeout(initData.progress_url, {
                 headers: {
-                  'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15',
+                  'User-Agent': DEFAULT_USER_AGENT,
                   'Accept': 'application/json',
                 },
-              }, 4000);
+              }, 5000);
               if (pollRes.ok) {
                 const pollData = await pollRes.json();
                 if (pollData.download_url && typeof pollData.download_url === 'string' && pollData.download_url.trim().length > 0) {
@@ -284,14 +284,17 @@ class DownloaderService {
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
+            'User-Agent': DEFAULT_USER_AGENT,
           },
           body: JSON.stringify({
             url: url,
             downloadMode: 'audio',
             audioFormat: formatParam === 'm4a' ? 'm4a' : 'mp3',
+            aFormat: formatParam === 'm4a' ? 'm4a' : 'mp3',
+            isAudioOnly: true,
             audioBitrate: '320',
           }),
-        }, 4000);
+        }, 5000);
 
         if (response.ok) {
           const data = await response.json();
@@ -367,7 +370,12 @@ class DownloaderService {
       const downloadResumable = FileSystem.createDownloadResumable(
         streamUrl,
         destinationFile,
-        {},
+        {
+          headers: {
+            'User-Agent': DEFAULT_USER_AGENT,
+            'Accept': '*/*',
+          },
+        },
         (downloadProgress) => {
           lastBytesWritten = downloadProgress.totalBytesWritten;
           lastExpectedBytes = downloadProgress.totalBytesExpectedToWrite > 0
@@ -393,8 +401,44 @@ class DownloaderService {
       const result = await downloadResumable.downloadAsync();
       this.activeDownloads.delete(downloadItem.id);
 
-      if (!result || !result.uri) {
-        throw new Error('Download failed: No file URI generated.');
+      if (!result || !result.uri || (result.status && result.status >= 400)) {
+        try {
+          await FileSystem.deleteAsync(destinationFile, { idempotent: true });
+        } catch {}
+        throw new Error(`Download failed with server status ${result?.status || 'network error'}.`);
+      }
+
+      // Verify file integrity
+      const fileInfo = await FileSystem.getInfoAsync(result.uri);
+      if (!fileInfo.exists || !fileInfo.size || fileInfo.size < 50 * 1024) {
+        try {
+          await FileSystem.deleteAsync(result.uri, { idempotent: true });
+        } catch {}
+        throw new Error('Downloaded audio stream was incomplete or empty. Please try again.');
+      }
+
+      // Check for HTML error payload
+      try {
+        const headerSample = await FileSystem.readAsStringAsync(result.uri, {
+          encoding: FileSystem.EncodingType.UTF8,
+          length: 150,
+        });
+        if (
+          headerSample.includes('<!DOCTYPE') ||
+          headerSample.includes('<html') ||
+          headerSample.includes('{"status":"error"') ||
+          headerSample.includes('{"error"')
+        ) {
+          try {
+            await FileSystem.deleteAsync(result.uri, { idempotent: true });
+          } catch {}
+          throw new Error('Audio stream returned an error response from server. Please retry.');
+        }
+      } catch (checkErr: any) {
+        if (checkErr?.message?.includes('Audio stream returned an error')) {
+          throw checkErr;
+        }
+        // binary files may fail UTF-8 decoding, which is expected for raw audio
       }
 
       onStatusChange('saving', 'Processing offline artwork & metadata...');
@@ -415,17 +459,18 @@ class DownloaderService {
         }
       }
 
-      // 5. Measure file size
+      // 5. Measure and probe audio duration
       let duration = downloadItem.duration || 180;
-      let fileSize = lastBytesWritten || 0;
+      let fileSize = fileInfo.size || lastBytesWritten || 0;
 
       try {
-        const fileInfo = await FileSystem.getInfoAsync(result.uri);
-        if (fileInfo.exists && fileInfo.size) {
-          fileSize = fileInfo.size;
+        const probePlayer = createAudioPlayer(result.uri);
+        if (probePlayer.duration && probePlayer.duration > 0) {
+          duration = Math.round(probePlayer.duration);
         }
-      } catch (e) {
-        console.warn('Error reading file info:', e);
+        probePlayer.remove();
+      } catch (probeErr) {
+        console.warn('Probe error on downloaded track:', probeErr);
       }
 
       // 6. Create Track
