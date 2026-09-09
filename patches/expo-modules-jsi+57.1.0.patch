@@ -108,15 +108,16 @@ index d43cdd5..91ee97e 100644
  
    /// Creates a PropNameID from existing `facebook.jsi.PropNameID`.
 diff --git a/node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Runtime/JavaScriptRuntime.swift b/node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Runtime/JavaScriptRuntime.swift
-index 3d796ee..12375d8 100644
+index 3d796ee..4a22a49 100644
 --- a/node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Runtime/JavaScriptRuntime.swift
 +++ b/node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Runtime/JavaScriptRuntime.swift
-@@ -311,7 +311,7 @@ open class JavaScriptRuntime: Equatable, Identifiable, @unchecked Sendable {
+@@ -311,7 +311,8 @@ open class JavaScriptRuntime: Equatable, Identifiable, @unchecked Sendable {
      let nativeConstructorKey = "__native_constructor__"
  
      // Validate that the name is a valid JS identifier to prevent code injection via eval.
 -    if name.wholeMatch(of: /^[a-zA-Z_$][a-zA-Z0-9_$]*$/) == nil {
-+    if name.wholeMatch(of: /^[a-zA-Z_\$][a-zA-Z0-9_\$]*$/) == nil {
++    let isValidIdentifier = !name.isEmpty && (name.first!.isLetter || name.first! == "_" || name.first! == "$") && name.allSatisfy { $0.isLetter || $0.isNumber || $0 == "_" || $0 == "$" }
++    if !isValidIdentifier {
        throw InvalidIdentifierError(identifier: name)
      }
  
