@@ -20,3 +20,81 @@ index 6115e87..957527c 100644
  
    RuntimeScheduler(const RuntimeScheduler &) = delete;
  
+diff --git a/node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Runtime/JavaScriptRuntime.swift b/node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Runtime/JavaScriptRuntime.swift
+index 3d796ee..3a93242 100644
+--- a/node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Runtime/JavaScriptRuntime.swift
++++ b/node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Runtime/JavaScriptRuntime.swift
+@@ -185,11 +185,12 @@ open class JavaScriptRuntime: Equatable, Identifiable, @unchecked Sendable {
+       resultPtr: UnsafeMutablePointer<facebook.jsi.Value>
+     ) -> Bool {
+       let propertyName = String(cString: propertyName)
+-      nonisolated(unsafe) let resultPtr = resultPtr
++      let resultAddress = UInt(bitPattern: resultPtr)
+ 
+       return withGuaranteedContext(context) { (context: HostObjectContext, runtime) in
+         return JavaScriptActor.assumeIsolated {
+           return forwardingSwiftErrorsToJS(runtime: runtime) {
++            let resultPtr = UnsafeMutablePointer<facebook.jsi.Value>(bitPattern: resultAddress)!
+             try context.get(propertyName).writeJSIValue(to: resultPtr)
+           }
+         }
+@@ -765,24 +766,19 @@ private func createFunctionClosure(
+     argumentsCount: Int,
+     resultPtr: UnsafeMutablePointer<facebook.jsi.Value>
+   ) -> Bool {
+-    // `assumeIsolated` runs `operation` synchronously, in this very scope — it never escapes and never
+-    // hops threads (see `JavaScriptActor.assumeIsolated`). So rather than materializing the move-only
+-    // `JavaScriptValuesBuffer` out here and smuggling it across the closure boundary through a
+-    // heap-allocated `JavaScriptRef` (Swift 6.2 rejects capturing/consuming a `~Copyable` value in the
+-    // escaping closure that `withoutActuallyEscaping` synthesizes), the closure constructs the buffer
+-    // locally from the raw pointer + count. Those are read-only call-scoped inputs that never outlive the
+-    // synchronous call, so the `nonisolated(unsafe)` capture is sound. This removes a per-call class
+-    // allocation + retain/release + dealloc that profiling showed dominating the no-op `@JS` host-call
+-    // floor.
+-    nonisolated(unsafe) let thisPtr = thisPtr
+-    nonisolated(unsafe) let argumentsPtr = argumentsPtr
+-    nonisolated(unsafe) let resultPtr = resultPtr
++    let thisAddress = UInt(bitPattern: thisPtr)
++    let argumentsAddress = UInt(bitPattern: argumentsPtr)
++    let resultAddress = UInt(bitPattern: resultPtr)
+ 
+     // See `withGuaranteedContext` for why neither the context nor the runtime is retained here, and
+     // why the result is written to the caller's slot instead of being returned.
+     return withGuaranteedContext(context) { (context: HostFunctionContext, runtime) in
+       return JavaScriptActor.assumeIsolated {
+         return forwardingSwiftErrorsToJS(runtime: runtime) {
++          let thisPtr = UnsafePointer<facebook.jsi.Value>(bitPattern: thisAddress)!
++          let argumentsPtr = UnsafePointer<facebook.jsi.Value>(bitPattern: argumentsAddress)!
++          let resultPtr = UnsafeMutablePointer<facebook.jsi.Value>(bitPattern: resultAddress)!
++
+           let this = UnsafeMutablePointer(mutating: thisPtr).move()
+           let arguments = JavaScriptValuesBuffer(runtime, start: argumentsPtr, count: argumentsCount)
+           let thisValue = JavaScriptValue(runtime, this)
+@@ -812,20 +808,19 @@ private func createFunctionClosure(
+     argumentsCount: Int,
+     resultPtr: UnsafeMutablePointer<facebook.jsi.Value>
+   ) -> Bool {
+-    // Same call-scoped reasoning as the owning-`this` overload above (see its comment) for why the
+-    // buffer is built inside the synchronous `assumeIsolated` closure. Here `this` is additionally
+-    // handed in as a borrowed `JavaScriptUnownedValue` pointing straight at the C++-owned `this` slot:
+-    // it is not moved out and no owning `JavaScriptValue` is allocated, so the closure avoids the
+-    // per-call `weak`-runtime form/destroy and heap object that the owning `this` pays.
+-    nonisolated(unsafe) let thisPtr = thisPtr
+-    nonisolated(unsafe) let argumentsPtr = argumentsPtr
+-    nonisolated(unsafe) let resultPtr = resultPtr
++    let thisAddress = UInt(bitPattern: thisPtr)
++    let argumentsAddress = UInt(bitPattern: argumentsPtr)
++    let resultAddress = UInt(bitPattern: resultPtr)
+ 
+     // See `withGuaranteedContext` for why neither the context nor the runtime is retained here, and
+     // why the result is written to the caller's slot instead of being returned.
+     return withGuaranteedContext(context) { (context: UnownedThisHostFunctionContext, runtime) in
+       return JavaScriptActor.assumeIsolated {
+         return forwardingSwiftErrorsToJS(runtime: runtime) {
++          let thisPtr = UnsafePointer<facebook.jsi.Value>(bitPattern: thisAddress)!
++          let argumentsPtr = UnsafePointer<facebook.jsi.Value>(bitPattern: argumentsAddress)!
++          let resultPtr = UnsafeMutablePointer<facebook.jsi.Value>(bitPattern: resultAddress)!
++
+           let arguments = JavaScriptValuesBuffer(runtime, start: argumentsPtr, count: argumentsCount)
+           let thisValue = JavaScriptUnownedValue(runtime.pointee, thisPtr)
+           try context.call(thisValue, consume arguments).writeJSIValue(to: resultPtr)
