@@ -1,3 +1,13 @@
+diff --git a/node_modules/expo-modules-jsi/apple/Package.swift b/node_modules/expo-modules-jsi/apple/Package.swift
+index 77b0525..ecf6036 100644
+--- a/node_modules/expo-modules-jsi/apple/Package.swift
++++ b/node_modules/expo-modules-jsi/apple/Package.swift
+@@ -1,4 +1,4 @@
+-// swift-tools-version: 6.2
++// swift-tools-version: 6.0
+ // The swift-tools-version declares the minimum version of Swift required to build this package.
+ 
+ import Foundation
 diff --git a/node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI-Cxx/include/RuntimeScheduler.h b/node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI-Cxx/include/RuntimeScheduler.h
 index 6115e87..957527c 100644
 --- a/node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI-Cxx/include/RuntimeScheduler.h
