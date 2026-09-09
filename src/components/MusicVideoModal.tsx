@@ -18,6 +18,7 @@ import { WebView } from 'react-native-webview';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../context/ThemeContext';
 import { ExtractedInfo } from '../services/downloaderService';
+import { storageService } from '../services/storageService';
 import { SPACING, RADIUS } from '../constants/theme';
 
 interface MusicVideoModalProps {
@@ -128,10 +129,13 @@ export const MusicVideoModal: React.FC<MusicVideoModalProps> = ({
     true;
   `;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (Haptics.impactAsync) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     }
+    const settings = await storageService.getSettings();
+    const preferredFormat = settings.preferredAudioQuality || 'm4a';
+
     const info: ExtractedInfo = {
       title: item.title,
       artist: item.artist,
@@ -140,7 +144,7 @@ export const MusicVideoModal: React.FC<MusicVideoModalProps> = ({
       sourceType: 'youtube',
       duration: item.durationSec,
       durationText: item.duration,
-      format: 'm4a',
+      format: preferredFormat,
     };
     onSaveOffline(info);
   };

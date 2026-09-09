@@ -95,10 +95,13 @@ export const DownloaderScreen: React.FC = () => {
     setIsVideoModalVisible(true);
   };
 
-  const handleOpenFormatModalForSearchResult = (item: SearchResultItem) => {
+  const handleOpenFormatModalForSearchResult = async (item: SearchResultItem) => {
     if (Haptics.impactAsync) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     }
+    const settings = await storageService.getSettings();
+    const preferredFormat = settings.preferredAudioQuality || 'm4a';
+
     const info: ExtractedInfo = {
       title: item.title,
       artist: item.artist,
@@ -107,7 +110,7 @@ export const DownloaderScreen: React.FC = () => {
       sourceType: 'youtube',
       duration: item.durationSec,
       durationText: item.duration,
-      format: 'm4a',
+      format: preferredFormat,
     };
     setSelectedTrackForFormat(info);
     setIsFormatModalVisible(true);
