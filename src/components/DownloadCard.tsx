@@ -63,15 +63,15 @@ export const DownloadCard: React.FC<DownloadCardProps> = ({ item, onCancel, onRe
   const getStatusLabel = () => {
     switch (item.status) {
       case 'resolving':
-        return 'Extracting stream...';
+        return `Extracting stream (${Math.max(5, Math.round(item.progress * 100))}%)`;
       case 'downloading':
         return `Downloading (${Math.round(item.progress * 100)}%)`;
       case 'saving':
-        return 'Saving to phone storage...';
+        return 'Saving to offline library...';
       case 'completed':
-        return 'Saved to Phone Storage';
+        return 'Saved to Offline Library';
       case 'error':
-        return item.errorMessage || 'Failed';
+        return item.errorMessage || 'Download failed';
       default:
         return 'Queued';
     }
@@ -82,20 +82,20 @@ export const DownloadCard: React.FC<DownloadCardProps> = ({ item, onCancel, onRe
       style={[
         styles.outerWrapper,
         {
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.85)',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.20)' : 'rgba(255, 255, 255, 0.85)',
           shadowColor: isDark ? '#000' : '#8CA0BA',
         },
       ]}
     >
       <BlurView
-        intensity={Platform.OS === 'ios' ? 70 : 100}
-        tint={isDark ? 'dark' : 'light'}
+        intensity={Platform.OS === 'ios' ? 85 : 100}
+        tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
         style={styles.blurContainer}
       >
         <LinearGradient
           colors={
             isDark
-              ? ['rgba(255, 255, 255, 0.05)', 'rgba(255, 255, 255, 0.02)', 'transparent']
+              ? ['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.03)', 'transparent']
               : ['rgba(255, 255, 255, 0.8)', 'rgba(240, 246, 255, 0.5)', 'rgba(230, 240, 255, 0.3)']
           }
           start={{ x: 0, y: 0 }}
@@ -148,13 +148,13 @@ export const DownloadCard: React.FC<DownloadCardProps> = ({ item, onCancel, onRe
                   },
                 ]}
               >
-                <LinearGradient
-                  colors={[colors.primary, '#FF7A00', colors.primaryLight]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
+                <View
                   style={[
                     styles.progressBarFill,
-                    { width: `${Math.max(5, item.progress * 100)}%` },
+                    {
+                      width: `${Math.max(5, item.progress * 100)}%`,
+                      backgroundColor: isDark ? '#FFFFFF' : colors.primary,
+                    },
                   ]}
                 />
               </View>
@@ -163,15 +163,17 @@ export const DownloadCard: React.FC<DownloadCardProps> = ({ item, onCancel, onRe
             <View style={styles.statusRow}>
               <View style={styles.statusBadgeRow}>
                 {item.status === 'completed' && (
-                  <Ionicons name="folder-outline" size={12} color={colors.success} style={{ marginRight: 2 }} />
+                  <Ionicons name="checkmark-circle" size={13} color={colors.success} style={{ marginRight: 3 }} />
                 )}
                 <Text style={[styles.statusText, { color: getStatusColor() }]}>
                   {getStatusLabel()}
                 </Text>
               </View>
-              {item.totalBytes > 0 && item.status === 'downloading' && (
+              {item.status === 'downloading' && item.bytesDownloaded > 0 && (
                 <Text style={[styles.bytesText, { color: colors.textDim }]}>
-                  {formatBytes(item.bytesDownloaded)} / {formatBytes(item.totalBytes)}
+                  {item.totalBytes > 0
+                    ? `${formatBytes(item.bytesDownloaded)} / ${formatBytes(item.totalBytes)}`
+                    : `${formatBytes(item.bytesDownloaded)}`}
                 </Text>
               )}
             </View>

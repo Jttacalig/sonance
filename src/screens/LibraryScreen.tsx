@@ -224,13 +224,13 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
                   styles.badgePill,
                   {
                     backgroundColor: isDark
-                      ? 'rgba(255, 51, 92, 0.16)'
-                      : 'rgba(255, 46, 85, 0.12)',
-                    borderColor: isDark ? 'rgba(255, 51, 92, 0.35)' : 'rgba(255, 46, 85, 0.3)',
+                      ? 'rgba(255, 255, 255, 0.08)'
+                      : 'rgba(0, 0, 0, 0.05)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
                   },
                 ]}
               >
-                <Text style={[styles.badgeText, { color: colors.primary }]}>
+                <Text style={[styles.badgeText, { color: colors.textPrimary }]}>
                   {tracks.length}
                 </Text>
               </View>
@@ -248,26 +248,24 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
             activeOpacity={0.8}
             accessibilityLabel="Add Music"
           >
-            <LinearGradient
-              colors={
-                isDark
-                  ? ['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.05)']
-                  : ['rgba(255, 255, 255, 0.95)', 'rgba(240, 245, 255, 0.8)']
-              }
+            <View
               style={[
                 styles.headerIconBtn,
                 {
+                  backgroundColor: isDark
+                    ? 'rgba(255, 255, 255, 0.08)'
+                    : 'rgba(255, 255, 255, 0.85)',
                   borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : '#FFFFFF',
                   shadowColor: isDark ? '#000' : '#8CA0BA',
                 },
               ]}
             >
               {isScanning ? (
-                <ActivityIndicator size="small" color={colors.primary} />
+                <ActivityIndicator size="small" color={isDark ? '#FFFFFF' : colors.primary} />
               ) : (
-                <Ionicons name="add" size={22} color={colors.primary} />
+                <Ionicons name="add" size={22} color={isDark ? '#FFFFFF' : colors.primary} />
               )}
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -278,14 +276,14 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
             style={[
               styles.searchCapsule,
               {
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.85)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.85)',
                 shadowColor: isDark ? '#000' : '#8CA0BA',
               },
             ]}
           >
             <BlurView
-              intensity={Platform.OS === 'ios' ? 70 : 100}
-              tint={isDark ? 'dark' : 'light'}
+              intensity={Platform.OS === 'ios' ? 85 : 100}
+              tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
               style={styles.searchBlur}
             >
               <Ionicons name="search" size={16} color={colors.textMuted} />
@@ -314,14 +312,17 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
                 activeOpacity={0.8}
                 accessibilityLabel="Play All"
               >
-                <LinearGradient
-                  colors={[colors.primary, '#FF007A', colors.primaryDark]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={[styles.playIconBtn, { shadowColor: colors.primary }]}
+                <View
+                  style={[
+                    styles.playIconBtn,
+                    {
+                      backgroundColor: isDark ? '#FFFFFF' : colors.primary,
+                      shadowColor: isDark ? '#FFFFFF' : colors.primary,
+                    },
+                  ]}
                 >
-                  <Ionicons name="play" size={18} color="#FFF" style={{ marginLeft: 2 }} />
-                </LinearGradient>
+                  <Ionicons name="play" size={18} color={isDark ? '#070A10' : '#FFF'} style={{ marginLeft: 2 }} />
+                </View>
               </TouchableOpacity>
 
               {/* Quick Shuffle Icon Button */}
@@ -330,9 +331,9 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
                   styles.shuffleIconBtn,
                   {
                     backgroundColor: isDark
-                      ? 'rgba(255, 255, 255, 0.08)'
+                      ? 'rgba(255, 255, 255, 0.09)'
                       : 'rgba(255, 255, 255, 0.75)',
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : '#FFFFFF',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.20)' : '#FFFFFF',
                     shadowColor: isDark ? '#000' : '#8CA0BA',
                   },
                 ]}
@@ -340,7 +341,7 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
                 activeOpacity={0.8}
                 accessibilityLabel="Shuffle"
               >
-                <Ionicons name="shuffle" size={18} color={colors.primary} />
+                <Ionicons name="shuffle" size={18} color={isDark ? '#FFFFFF' : colors.primary} />
               </TouchableOpacity>
             </>
           )}
@@ -365,15 +366,15 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
                   {
                     backgroundColor: isActive
                       ? isDark
-                        ? 'rgba(255, 51, 92, 0.22)'
-                        : 'rgba(255, 46, 85, 0.14)'
-                      : isDark
-                      ? 'rgba(255, 255, 255, 0.05)'
-                      : 'rgba(255, 255, 255, 0.65)',
-                    borderColor: isActive
-                      ? colors.primary
+                        ? 'rgba(255, 255, 255, 0.22)'
+                        : 'rgba(0, 0, 0, 0.08)'
                       : isDark
                       ? 'rgba(255, 255, 255, 0.08)'
+                      : 'rgba(255, 255, 255, 0.65)',
+                    borderColor: isActive
+                      ? (isDark ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.2)')
+                      : isDark
+                      ? 'rgba(255, 255, 255, 0.16)'
                       : '#FFFFFF',
                     shadowColor: isDark ? '#000' : '#8CA0BA',
                   },
@@ -388,7 +389,7 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
                 <Text
                   style={[
                     styles.tabChipText,
-                    { color: isActive ? colors.primary : colors.textSecondary },
+                    { color: isActive ? (isDark ? '#FFFFFF' : '#000000') : colors.textSecondary },
                     isActive && styles.activeTabText,
                   ]}
                 >
@@ -425,16 +426,17 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
           ListEmptyComponent={
             !isLoading ? (
               <View style={styles.emptyContainer}>
-                <LinearGradient
-                  colors={
-                    isDark
-                      ? ['rgba(255, 51, 92, 0.2)', 'rgba(139, 92, 246, 0.1)']
-                      : ['rgba(255, 46, 85, 0.14)', 'rgba(0, 180, 216, 0.08)']
-                  }
-                  style={styles.emptyIconCircle}
+                <View
+                  style={[
+                    styles.emptyIconCircle,
+                    {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.1)',
+                    },
+                  ]}
                 >
-                  <Ionicons name="musical-notes-outline" size={40} color={colors.primary} />
-                </LinearGradient>
+                  <Ionicons name="musical-notes-outline" size={40} color={isDark ? '#FFFFFF' : colors.primary} />
+                </View>
                 <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
                   {searchQuery ? 'No matching songs found' : 'Your Library is Empty'}
                 </Text>
@@ -451,13 +453,18 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
                       onPress={handleAutoScan}
                       disabled={isScanning || isTransferring}
                     >
-                      <LinearGradient
-                        colors={[colors.primary, '#FF007A', colors.primaryDark]}
-                        style={[styles.emptyCtaBtn, { shadowColor: colors.primary }]}
+                      <View
+                        style={[
+                          styles.emptyCtaBtn,
+                          {
+                            backgroundColor: isDark ? '#FFFFFF' : colors.primary,
+                            shadowColor: isDark ? '#FFFFFF' : colors.primary,
+                          },
+                        ]}
                       >
-                        <Ionicons name="scan-outline" size={18} color="#FFF" />
-                        <Text style={styles.emptyCtaText}>Auto-Scan Phone for Songs</Text>
-                      </LinearGradient>
+                        <Ionicons name="scan-outline" size={18} color={isDark ? '#070A10' : '#FFF'} />
+                        <Text style={[styles.emptyCtaText, { color: isDark ? '#070A10' : '#FFF' }]}>Auto-Scan Phone for Songs</Text>
+                      </View>
                     </TouchableOpacity>
 
                     {/* Choose Files Button */}

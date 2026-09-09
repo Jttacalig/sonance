@@ -285,14 +285,22 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const sub = player.addListener('playbackStatusUpdate', onPlaybackStatusUpdate);
       listenerRef.current = sub;
 
-      // 6. Configure iOS Lock Screen controls & Dynamic Island info
+      // 6. Configure iOS Lock Screen controls & Dynamic Island / Control Center info
       try {
-        player.setActiveForLockScreen(true, {
-          title: track.title,
-          artist: track.artist,
-          albumTitle: track.album || 'Offline Library',
-          artworkUrl: verifiedArtworkUri,
-        });
+        player.setActiveForLockScreen(
+          true,
+          {
+            title: track.title,
+            artist: track.artist,
+            albumTitle: track.album || 'Offline Library',
+            artworkUrl: verifiedArtworkUri,
+          },
+          {
+            showSeekForward: true,
+            showSeekBackward: true,
+            isLiveStream: false,
+          }
+        );
       } catch (e) {
         console.warn('Lockscreen metadata set error:', e);
       }

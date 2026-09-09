@@ -122,7 +122,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
           />
           <BlurView
             intensity={Platform.OS === 'ios' ? playerTheme.blurIntensity : 100}
-            tint={isDark ? 'dark' : 'light'}
+            tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
             style={StyleSheet.absoluteFill}
           />
           <View
@@ -155,7 +155,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
           />
           <BlurView
             intensity={Platform.OS === 'ios' ? playerTheme.blurIntensity : 100}
-            tint={isDark ? 'dark' : 'light'}
+            tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
             style={StyleSheet.absoluteFill}
           />
           <View
@@ -182,8 +182,8 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
         <LinearGradient
           colors={
             isDark
-              ? ['rgba(255, 51, 92, 0.35)', 'rgba(139, 92, 246, 0.25)', 'transparent']
-              : ['rgba(255, 46, 85, 0.25)', 'rgba(0, 180, 216, 0.18)', 'transparent']
+              ? ['rgba(255, 255, 255, 0.06)', 'rgba(255, 255, 255, 0.02)', 'transparent']
+              : ['rgba(255, 255, 255, 0.65)', 'rgba(240, 245, 255, 0.3)', 'transparent']
           }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -192,8 +192,8 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
         <LinearGradient
           colors={
             isDark
-              ? ['rgba(139, 92, 246, 0.2)', 'rgba(0, 242, 254, 0.15)', 'transparent']
-              : ['rgba(121, 40, 202, 0.15)', 'rgba(255, 145, 0, 0.12)', 'transparent']
+              ? ['rgba(255, 255, 255, 0.03)', 'transparent']
+              : ['rgba(240, 245, 255, 0.3)', 'transparent']
           }
           start={{ x: 1, y: 0.2 }}
           end={{ x: 0, y: 0.9 }}
@@ -324,7 +324,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                     style={[
                       styles.artworkWrapper,
                       {
-                        shadowColor: isDark ? colors.primary : '#7928CA',
+                        shadowColor: '#000',
                       },
                     ]}
                   >
@@ -335,8 +335,8 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                           width: artSize,
                           height: artSize,
                           borderColor: isDark
-                            ? 'rgba(255, 255, 255, 0.25)'
-                            : 'rgba(255, 255, 255, 0.9)',
+                            ? 'rgba(255, 255, 255, 0.28)'
+                            : 'rgba(255, 255, 255, 0.95)',
                         },
                       ]}
                     >
@@ -347,16 +347,24 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                           resizeMode="cover"
                         />
                       ) : (
-                        <LinearGradient
-                          colors={
-                            isDark
-                              ? ['#20122B', '#111728', '#0B0F17']
-                              : ['#FCE4EC', '#EDE7F6', '#E1F5FE']
-                          }
-                          style={styles.placeholderBigArt}
-                        >
-                          <Ionicons name="musical-notes" size={artSize * 0.38} color={colors.primary} />
-                        </LinearGradient>
+                        <View style={styles.placeholderBigArt}>
+                          <BlurView
+                            intensity={Platform.OS === 'ios' ? 85 : 100}
+                            tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
+                            style={StyleSheet.absoluteFill}
+                          />
+                          <LinearGradient
+                            colors={
+                              isDark
+                                ? ['rgba(255, 255, 255, 0.16)', 'rgba(255, 255, 255, 0.04)', 'transparent']
+                                : ['rgba(255, 255, 255, 0.9)', 'rgba(240, 246, 255, 0.6)']
+                            }
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={StyleSheet.absoluteFill}
+                          />
+                          <Ionicons name="musical-notes" size={artSize * 0.38} color={isDark ? '#FFFFFF' : colors.primary} />
+                        </View>
                       )}
                     </View>
                   </TouchableOpacity>
@@ -381,29 +389,29 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                       {currentTrack.artist}
                     </Text>
 
-                    {/* iOS 26 Audio Output Chip */}
+                    {/* iOS Audio Output Chip */}
                     <TouchableOpacity
                       activeOpacity={0.75}
                       onPress={() => triggerHud(currentDevice)}
                       style={[
                         styles.audioRouteChip,
                         {
-                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.75)',
-                          borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(0, 0, 0, 0.06)',
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.09)' : 'rgba(255, 255, 255, 0.75)',
+                          borderColor: isDark ? 'rgba(255, 255, 255, 0.20)' : 'rgba(0, 0, 0, 0.06)',
                         },
                       ]}
                     >
                       <Ionicons
                         name={currentDevice.type === 'airpods' || currentDevice.type === 'headphones' ? 'headset' : currentDevice.type === 'bluetooth' ? 'bluetooth' : 'volume-high'}
                         size={12}
-                        color={colors.primary}
+                        color={isDark ? '#FFFFFF' : colors.primary}
                         style={{ marginRight: 5 }}
                       />
                       <Text style={[styles.audioRouteText, { color: colors.textPrimary }]}>
                         {currentDevice.name}
                       </Text>
                       <Text style={[styles.audioRouteDot, { color: colors.textMuted }]}>•</Text>
-                      <Text style={[styles.audioRouteQuality, { color: colors.primary }]}>
+                      <Text style={[styles.audioRouteQuality, { color: isDark ? 'rgba(255, 255, 255, 0.8)' : colors.primary }]}>
                         {currentDevice.quality.split('•')[0].trim()}
                       </Text>
                     </TouchableOpacity>
@@ -414,9 +422,9 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                       styles.favoriteButton,
                       {
                         backgroundColor: isDark
-                          ? 'rgba(255, 255, 255, 0.08)'
+                          ? 'rgba(255, 255, 255, 0.09)'
                           : 'rgba(255, 255, 255, 0.75)',
-                        borderColor: isDark ? 'rgba(255, 255, 255, 0.18)' : '#FFFFFF',
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : '#FFFFFF',
                       },
                     ]}
                     onPress={() => toggleFavorite(currentTrack.id)}
@@ -425,23 +433,23 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                     <Ionicons
                       name={currentTrack.isFavorite ? 'heart' : 'heart-outline'}
                       size={24}
-                      color={currentTrack.isFavorite ? colors.primary : colors.textMuted}
+                      color={currentTrack.isFavorite ? (isDark ? '#FFFFFF' : colors.primary) : colors.textMuted}
                     />
                   </TouchableOpacity>
                 </View>
 
                 {/* Frosted Glass Scrubber Card */}
                 <BlurView
-                  intensity={Platform.OS === 'ios' ? 75 : 100}
-                  tint={isDark ? 'dark' : 'light'}
+                  intensity={Platform.OS === 'ios' ? 85 : 100}
+                  tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
                   style={[
                     styles.scrubberCard,
                     {
                       borderColor: isDark
-                        ? 'rgba(255, 255, 255, 0.22)'
+                        ? 'rgba(255, 255, 255, 0.26)'
                         : 'rgba(255, 255, 255, 0.95)',
-                      shadowColor: isDark ? '#00F2FE' : '#8CA0BA',
-                      shadowOpacity: isDark ? 0.35 : 0.2,
+                      shadowColor: '#000',
+                      shadowOpacity: isDark ? 0.35 : 0.18,
                       shadowRadius: 14,
                     },
                   ]}
@@ -450,7 +458,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                   <LinearGradient
                     colors={
                       isDark
-                        ? ['rgba(255, 255, 255, 0.1)', 'rgba(0, 242, 254, 0.04)', 'rgba(10, 18, 28, 0.55)']
+                        ? ['rgba(255, 255, 255, 0.15)', 'rgba(255, 255, 255, 0.03)', 'transparent']
                         : ['rgba(255, 255, 255, 0.95)', 'rgba(240, 246, 255, 0.65)', 'rgba(225, 238, 255, 0.4)']
                     }
                     start={{ x: 0, y: 0 }}
@@ -458,12 +466,12 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                     style={StyleSheet.absoluteFill}
                   />
 
-                  {/* Reference Style: Top Cyan Rim Light Reflection */}
+                  {/* Top Specular Rim Light Reflection */}
                   <LinearGradient
                     colors={
                       isDark
-                        ? ['rgba(0, 242, 254, 0.65)', 'rgba(56, 189, 248, 0.25)', 'transparent']
-                        : ['rgba(255, 255, 255, 0.95)', 'rgba(0, 180, 216, 0.25)', 'transparent']
+                        ? ['rgba(255, 255, 255, 0.65)', 'rgba(255, 255, 255, 0.18)', 'transparent']
+                        : ['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.3)', 'transparent']
                     }
                     start={{ x: 0.1, y: 0 }}
                     end={{ x: 0.9, y: 0 }}
@@ -474,11 +482,11 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                     minimumValue={0}
                     maximumValue={Math.max(1, duration)}
                     value={displayTime}
-                    minimumTrackTintColor={colors.primary}
+                    minimumTrackTintColor={isDark ? '#FFFFFF' : '#0F172A'}
                     maximumTrackTintColor={
-                      isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.12)'
+                      isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(0, 0, 0, 0.12)'
                     }
-                    thumbTintColor="#FFFFFF"
+                    thumbTintColor={isDark ? '#FFFFFF' : '#0F172A'}
                     onSlidingStart={handleSlidingStart}
                     onValueChange={handleValueChange}
                     onSlidingComplete={handleSlidingComplete}
@@ -504,9 +512,9 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                         height: secondaryBtnSize,
                         borderRadius: secondaryBtnSize / 2,
                         backgroundColor: isDark
-                          ? 'rgba(255, 255, 255, 0.08)'
-                          : 'rgba(255, 255, 255, 0.75)',
-                        borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : '#FFFFFF',
+                          ? (isShuffle ? 'rgba(255, 255, 255, 0.20)' : 'rgba(255, 255, 255, 0.09)')
+                          : (isShuffle ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.75)'),
+                        borderColor: isDark ? (isShuffle ? 'rgba(255, 255, 255, 0.40)' : 'rgba(255, 255, 255, 0.20)') : '#FFFFFF',
                       },
                     ]}
                     onPress={toggleShuffle}
@@ -515,7 +523,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                     <Ionicons
                       name="shuffle"
                       size={20}
-                      color={isShuffle ? colors.primary : colors.textMuted}
+                      color={isShuffle ? (isDark ? '#FFFFFF' : colors.primary) : colors.textMuted}
                     />
                   </TouchableOpacity>
 
@@ -528,9 +536,9 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                         height: controlBtnSize,
                         borderRadius: controlBtnSize / 2,
                         backgroundColor: isDark
-                          ? 'rgba(255, 255, 255, 0.08)'
+                          ? 'rgba(255, 255, 255, 0.09)'
                           : 'rgba(255, 255, 255, 0.75)',
-                        borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : '#FFFFFF',
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.20)' : '#FFFFFF',
                       },
                     ]}
                     onPress={skipToPrevious}
@@ -547,36 +555,23 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                         width: playBtnSize,
                         height: playBtnSize,
                         borderRadius: playBtnSize / 2,
+                        backgroundColor: isDark ? '#FFFFFF' : '#0F172A',
+                        shadowColor: '#000',
                       },
                     ]}
                     onPress={togglePlayPause}
                     activeOpacity={0.85}
                   >
-                    <LinearGradient
-                      colors={[colors.primary, '#FF007A', colors.primaryDark]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={[
-                        styles.playPauseBtn,
-                        {
-                          width: playBtnSize,
-                          height: playBtnSize,
-                          borderRadius: playBtnSize / 2,
-                          shadowColor: colors.primary,
-                        },
-                      ]}
-                    >
-                      {isLoading ? (
-                        <Ionicons name="sync-outline" size={34} color="#FFF" />
-                      ) : (
-                        <Ionicons
-                          name={isPlaying ? 'pause' : 'play'}
-                          size={34}
-                          color="#FFF"
-                          style={isPlaying ? {} : { marginLeft: 3 }}
-                        />
-                      )}
-                    </LinearGradient>
+                    {isLoading ? (
+                      <Ionicons name="sync-outline" size={32} color={isDark ? '#070A10' : '#FFFFFF'} style={{ alignSelf: 'center' }} />
+                    ) : (
+                      <Ionicons
+                        name={isPlaying ? 'pause' : 'play'}
+                        size={32}
+                        color={isDark ? '#070A10' : '#FFFFFF'}
+                        style={isPlaying ? { alignSelf: 'center' } : { alignSelf: 'center', marginLeft: 3.5 }}
+                      />
+                    )}
                   </TouchableOpacity>
 
                   {/* Next */}
@@ -588,9 +583,9 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                         height: controlBtnSize,
                         borderRadius: controlBtnSize / 2,
                         backgroundColor: isDark
-                          ? 'rgba(255, 255, 255, 0.08)'
+                          ? 'rgba(255, 255, 255, 0.09)'
                           : 'rgba(255, 255, 255, 0.75)',
-                        borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : '#FFFFFF',
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.20)' : '#FFFFFF',
                       },
                     ]}
                     onPress={skipToNext}
@@ -608,9 +603,9 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                         height: secondaryBtnSize,
                         borderRadius: secondaryBtnSize / 2,
                         backgroundColor: isDark
-                          ? 'rgba(255, 255, 255, 0.08)'
-                          : 'rgba(255, 255, 255, 0.75)',
-                        borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : '#FFFFFF',
+                          ? (repeatMode !== 'off' ? 'rgba(255, 255, 255, 0.20)' : 'rgba(255, 255, 255, 0.09)')
+                          : (repeatMode !== 'off' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.75)'),
+                        borderColor: isDark ? (repeatMode !== 'off' ? 'rgba(255, 255, 255, 0.40)' : 'rgba(255, 255, 255, 0.20)') : '#FFFFFF',
                       },
                     ]}
                     onPress={toggleRepeatMode}
@@ -619,11 +614,11 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                     <Ionicons
                       name={repeatMode === 'one' ? 'repeat-outline' : 'repeat'}
                       size={20}
-                      color={repeatMode !== 'off' ? colors.primary : colors.textMuted}
+                      color={repeatMode !== 'off' ? (isDark ? '#FFFFFF' : colors.primary) : colors.textMuted}
                     />
                     {repeatMode === 'one' && (
-                      <View style={[styles.repeatBadge, { backgroundColor: colors.primary }]}>
-                        <Text style={styles.repeatBadgeText}>1</Text>
+                      <View style={[styles.repeatBadge, { backgroundColor: isDark ? '#FFFFFF' : colors.primary }]}>
+                        <Text style={[styles.repeatBadgeText, { color: isDark ? '#070A10' : '#FFFFFF' }]}>1</Text>
                       </View>
                     )}
                   </TouchableOpacity>
@@ -635,15 +630,15 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                     styles.bottomDockCard,
                     {
                       borderColor: isDark
-                        ? 'rgba(255, 255, 255, 0.14)'
+                        ? 'rgba(255, 255, 255, 0.24)'
                         : 'rgba(255, 255, 255, 0.85)',
-                      shadowColor: isDark ? '#000' : '#8CA0BA',
+                      shadowColor: '#000',
                     },
                   ]}
                 >
                   <BlurView
-                    intensity={Platform.OS === 'ios' ? 70 : 100}
-                    tint={isDark ? 'dark' : 'light'}
+                    intensity={Platform.OS === 'ios' ? 85 : 100}
+                    tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
                     style={styles.bottomDockBlur}
                   >
                     {/* Lyrics Toggle Button */}
@@ -654,9 +649,9 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                           styles.dockActionBtnActive,
                           {
                             backgroundColor: isDark
-                              ? 'rgba(0, 242, 254, 0.18)'
-                              : 'rgba(0, 180, 216, 0.14)',
-                            borderColor: colors.accentCyan,
+                              ? 'rgba(255, 255, 255, 0.16)'
+                              : 'rgba(0, 0, 0, 0.08)',
+                            borderColor: isDark ? 'rgba(255, 255, 255, 0.28)' : 'rgba(0, 0, 0, 0.15)',
                           },
                         ],
                       ]}
@@ -666,12 +661,12 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                       <Ionicons
                         name="chatbubble-ellipses"
                         size={17}
-                        color={showLyrics ? colors.accentCyan : colors.textSecondary}
+                        color={showLyrics ? (isDark ? '#FFFFFF' : colors.textPrimary) : colors.textSecondary}
                       />
                       <Text
                         style={[
                           styles.dockActionLabel,
-                          { color: showLyrics ? colors.accentCyan : colors.textSecondary },
+                          { color: showLyrics ? (isDark ? '#FFFFFF' : colors.textPrimary) : colors.textSecondary },
                         ]}
                         numberOfLines={1}
                       >
@@ -687,9 +682,9 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                           styles.dockActionBtnActive,
                           {
                             backgroundColor: isDark
-                              ? 'rgba(255, 51, 92, 0.18)'
-                              : 'rgba(255, 46, 85, 0.12)',
-                            borderColor: colors.primary,
+                              ? 'rgba(255, 255, 255, 0.16)'
+                              : 'rgba(0, 0, 0, 0.08)',
+                            borderColor: isDark ? 'rgba(255, 255, 255, 0.28)' : 'rgba(0, 0, 0, 0.15)',
                           },
                         ],
                       ]}
@@ -699,12 +694,12 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                       <Ionicons
                         name="options"
                         size={17}
-                        color={isEqEnabled ? colors.primary : colors.textSecondary}
+                        color={isEqEnabled ? (isDark ? '#FFFFFF' : colors.textPrimary) : colors.textSecondary}
                       />
                       <Text
                         style={[
                           styles.dockActionLabel,
-                          { color: isEqEnabled ? colors.primary : colors.textSecondary },
+                          { color: isEqEnabled ? (isDark ? '#FFFFFF' : colors.textPrimary) : colors.textSecondary },
                         ]}
                         numberOfLines={1}
                       >
@@ -720,9 +715,9 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                           styles.dockActionBtnActive,
                           {
                             backgroundColor: isDark
-                              ? 'rgba(255, 51, 92, 0.18)'
-                              : 'rgba(255, 46, 85, 0.12)',
-                            borderColor: colors.primary,
+                              ? 'rgba(255, 255, 255, 0.16)'
+                              : 'rgba(0, 0, 0, 0.08)',
+                            borderColor: isDark ? 'rgba(255, 255, 255, 0.28)' : 'rgba(0, 0, 0, 0.15)',
                           },
                         ],
                       ]}
@@ -732,12 +727,12 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                       <Ionicons
                         name="color-palette"
                         size={17}
-                        color={playerTheme.type !== 'artwork_aura' ? colors.primary : colors.textSecondary}
+                        color={playerTheme.type !== 'artwork_aura' ? (isDark ? '#FFFFFF' : colors.textPrimary) : colors.textSecondary}
                       />
                       <Text
                         style={[
                           styles.dockActionLabel,
-                          { color: playerTheme.type !== 'artwork_aura' ? colors.primary : colors.textSecondary },
+                          { color: playerTheme.type !== 'artwork_aura' ? (isDark ? '#FFFFFF' : colors.textPrimary) : colors.textSecondary },
                         ]}
                         numberOfLines={1}
                       >
@@ -753,9 +748,9 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                           styles.dockActionBtnActive,
                           {
                             backgroundColor: isDark
-                              ? 'rgba(255, 51, 92, 0.18)'
-                              : 'rgba(255, 46, 85, 0.12)',
-                            borderColor: colors.primary,
+                              ? 'rgba(255, 255, 255, 0.16)'
+                              : 'rgba(0, 0, 0, 0.08)',
+                            borderColor: isDark ? 'rgba(255, 255, 255, 0.28)' : 'rgba(0, 0, 0, 0.15)',
                           },
                         ],
                       ]}
@@ -765,12 +760,12 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                       <Ionicons
                         name="speedometer-outline"
                         size={17}
-                        color={playbackRate !== 1.0 ? colors.primary : colors.textSecondary}
+                        color={playbackRate !== 1.0 ? (isDark ? '#FFFFFF' : colors.textPrimary) : colors.textSecondary}
                       />
                       <Text
                         style={[
                           styles.dockActionLabel,
-                          { color: playbackRate !== 1.0 ? colors.primary : colors.textSecondary },
+                          { color: playbackRate !== 1.0 ? (isDark ? '#FFFFFF' : colors.textPrimary) : colors.textSecondary },
                         ]}
                         numberOfLines={1}
                       >
@@ -786,9 +781,9 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                           styles.dockActionBtnActive,
                           {
                             backgroundColor: isDark
-                              ? 'rgba(255, 51, 92, 0.18)'
-                              : 'rgba(255, 46, 85, 0.12)',
-                            borderColor: colors.primary,
+                              ? 'rgba(255, 255, 255, 0.16)'
+                              : 'rgba(0, 0, 0, 0.08)',
+                            borderColor: isDark ? 'rgba(255, 255, 255, 0.28)' : 'rgba(0, 0, 0, 0.15)',
                           },
                         ],
                       ]}
@@ -798,12 +793,12 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                       <Ionicons
                         name="moon"
                         size={17}
-                        color={sleepTimerMinutes !== null ? colors.primary : colors.textSecondary}
+                        color={sleepTimerMinutes !== null ? (isDark ? '#FFFFFF' : colors.textPrimary) : colors.textSecondary}
                       />
                       <Text
                         style={[
                           styles.dockActionLabel,
-                          { color: sleepTimerMinutes !== null ? colors.primary : colors.textSecondary },
+                          { color: sleepTimerMinutes !== null ? (isDark ? '#FFFFFF' : colors.textPrimary) : colors.textSecondary },
                         ]}
                         numberOfLines={1}
                       >
@@ -820,8 +815,8 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                       <View style={styles.dockIconBadgeWrapper}>
                         <Ionicons name="list" size={17} color={colors.textSecondary} />
                         {queue.length > 0 && (
-                          <View style={[styles.queueCountBadge, { backgroundColor: colors.primary }]}>
-                            <Text style={styles.queueCountText}>{queue.length}</Text>
+                          <View style={[styles.queueCountBadge, { backgroundColor: isDark ? '#FFFFFF' : colors.primary }]}>
+                            <Text style={[styles.queueCountText, { color: isDark ? '#070A10' : '#FFFFFF' }]}>{queue.length}</Text>
                           </View>
                         )}
                       </View>
@@ -1052,15 +1047,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   playPauseWrapper: {
+    justifyContent: 'center',
+    alignItems: 'center',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.45,
     shadowRadius: 16,
     elevation: 10,
   },
   playPauseBtn: {
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.45)',
   },
   bottomDockCard: {

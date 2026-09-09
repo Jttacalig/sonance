@@ -63,17 +63,14 @@ export const SleepTimerModal: React.FC<SleepTimerModalProps> = ({ visible, onClo
                   style={[
                     styles.optionItem,
                     {
-                      backgroundColor: colors.surface,
+                      backgroundColor: isSelected
+                        ? (isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(15, 23, 42, 0.06)')
+                        : colors.surface,
                       borderColor: isSelected
                         ? colors.primary
                         : isDark
                         ? 'rgba(255, 255, 255, 0.06)'
                         : '#FFFFFF',
-                    },
-                    isSelected && {
-                      backgroundColor: isDark
-                        ? 'rgba(255, 51, 92, 0.12)'
-                        : 'rgba(255, 46, 85, 0.08)',
                     },
                   ]}
                   onPress={() => handleSelect(opt.minutes)}

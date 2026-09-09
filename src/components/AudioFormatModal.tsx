@@ -79,14 +79,14 @@ export const AudioFormatModal: React.FC<AudioFormatModalProps> = ({
               style={[
                 styles.modalCard,
                 {
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.9)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.9)',
                   shadowColor: isDark ? '#000' : '#8CA0BA',
                 },
               ]}
             >
               <BlurView
                 intensity={Platform.OS === 'ios' ? 85 : 100}
-                tint={isDark ? 'dark' : 'light'}
+                tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
                 style={styles.cardBlur}
               >
                 {/* Modal Header */}
@@ -342,23 +342,26 @@ export const AudioFormatModal: React.FC<AudioFormatModalProps> = ({
                     disabled={isDownloading}
                     activeOpacity={0.85}
                   >
-                    <LinearGradient
-                      colors={[colors.primary, '#FF007A', colors.primaryDark]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={[styles.downloadBtn, { shadowColor: colors.primary }]}
+                    <View
+                      style={[
+                        styles.downloadBtn,
+                        {
+                          backgroundColor: isDark ? '#FFFFFF' : colors.primary,
+                          shadowColor: isDark ? '#FFFFFF' : colors.primary,
+                        },
+                      ]}
                     >
                       {isDownloading ? (
-                        <ActivityIndicator size="small" color="#FFF" />
+                        <ActivityIndicator size="small" color={isDark ? '#070A10' : '#FFF'} />
                       ) : (
                         <>
-                          <Ionicons name="cloud-download" size={20} color="#FFF" />
-                          <Text style={styles.downloadBtnText}>
+                          <Ionicons name="cloud-download" size={20} color={isDark ? '#070A10' : '#FFF'} />
+                          <Text style={[styles.downloadBtnText, { color: isDark ? '#070A10' : '#FFF' }]}>
                             Download {currentOption.label} ({currentOption.bitrate})
                           </Text>
                         </>
                       )}
-                    </LinearGradient>
+                    </View>
                   </TouchableOpacity>
                 </View>
               </BlurView>

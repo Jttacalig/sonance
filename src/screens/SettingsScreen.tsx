@@ -208,15 +208,15 @@ export const SettingsScreen: React.FC = () => {
               style={[
                 styles.unifiedCard,
                 {
-                  backgroundColor: isDark ? 'rgba(10, 18, 28, 0.55)' : 'rgba(255, 255, 255, 0.75)',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : '#FFFFFF',
-                  shadowColor: isDark ? colors.primary : '#8CA0BA',
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.75)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : '#FFFFFF',
+                  shadowColor: '#000',
                 },
               ]}
             >
               <BlurView
-                intensity={Platform.OS === 'ios' ? 70 : 100}
-                tint={isDark ? 'dark' : 'light'}
+                intensity={Platform.OS === 'ios' ? 85 : 100}
+                tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
                 style={styles.cardBlur}
               >
                 {/* Theme Mode Segmented Selector */}
@@ -232,8 +232,8 @@ export const SettingsScreen: React.FC = () => {
                           isSelected && [
                             styles.activeSegmentBtn,
                             {
-                              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.16)' : '#FFFFFF',
-                              borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0,0,0,0.06)',
+                              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.22)' : '#FFFFFF',
+                              borderColor: isDark ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0,0,0,0.06)',
                             },
                           ],
                         ]}
@@ -245,7 +245,7 @@ export const SettingsScreen: React.FC = () => {
                         <Ionicons
                           name={opt.icon}
                           size={15}
-                          color={isSelected ? colors.primary : colors.textMuted}
+                          color={isSelected ? (isDark ? '#FFFFFF' : colors.primary) : colors.textMuted}
                         />
                         <Text
                           style={[
@@ -271,6 +271,9 @@ export const SettingsScreen: React.FC = () => {
                   <View style={styles.paletteDots}>
                     {ACCENT_THEMES.map((accent) => {
                       const isSelected = accentId === accent.id;
+                      const dotColor = isDark
+                        ? accent.primary
+                        : accent.lightPrimary || accent.primary;
                       return (
                         <TouchableOpacity
                           key={accent.id}
@@ -281,10 +284,21 @@ export const SettingsScreen: React.FC = () => {
                           }}
                           style={[
                             styles.accentDotWrapper,
-                            isSelected && { borderColor: accent.primary, borderWidth: 2 },
+                            isSelected && { borderColor: dotColor, borderWidth: 2 },
                           ]}
                         >
-                          <View style={[styles.accentDot, { backgroundColor: accent.primary }]} />
+                          <View
+                            style={[
+                              styles.accentDot,
+                              {
+                                backgroundColor: dotColor,
+                                borderWidth: 1,
+                                borderColor: isDark
+                                  ? 'rgba(255, 255, 255, 0.3)'
+                                  : 'rgba(0, 0, 0, 0.12)',
+                              },
+                            ]}
+                          />
                         </TouchableOpacity>
                       );
                     })}
@@ -300,8 +314,8 @@ export const SettingsScreen: React.FC = () => {
                   onPress={() => setShowWallpaperModal(true)}
                 >
                   <View style={styles.rowLeft}>
-                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(0, 242, 254, 0.14)' : 'rgba(0, 180, 216, 0.1)' }]}>
-                      <Ionicons name="color-palette" size={17} color={colors.accentCyan} />
+                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}>
+                      <Ionicons name="color-palette" size={17} color={isDark ? '#FFFFFF' : colors.primary} />
                     </View>
                     <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>
                       Player Wallpaper & Aura
@@ -324,15 +338,15 @@ export const SettingsScreen: React.FC = () => {
                   onPress={() => setShowEqModal(true)}
                 >
                   <View style={styles.rowLeft}>
-                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(255, 51, 92, 0.14)' : 'rgba(255, 46, 85, 0.1)' }]}>
-                      <Ionicons name="options" size={17} color={colors.primary} />
+                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}>
+                      <Ionicons name="options" size={17} color={isDark ? '#FFFFFF' : colors.primary} />
                     </View>
                     <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>
                       Audio Equalizer (5-Band)
                     </Text>
                   </View>
                   <View style={styles.rowRight}>
-                    <Text style={[styles.rowValue, { color: colors.primary, fontWeight: '700' }]}>
+                    <Text style={[styles.rowValue, { color: isDark ? '#FFFFFF' : colors.primary, fontWeight: '700' }]}>
                       {activePreset.name}
                     </Text>
                     <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -351,15 +365,15 @@ export const SettingsScreen: React.FC = () => {
               style={[
                 styles.unifiedCard,
                 {
-                  backgroundColor: isDark ? 'rgba(10, 18, 28, 0.55)' : 'rgba(255, 255, 255, 0.75)',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : '#FFFFFF',
-                  shadowColor: isDark ? '#000' : '#8CA0BA',
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.75)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : '#FFFFFF',
+                  shadowColor: '#000',
                 },
               ]}
             >
               <BlurView
-                intensity={Platform.OS === 'ios' ? 70 : 100}
-                tint={isDark ? 'dark' : 'light'}
+                intensity={Platform.OS === 'ios' ? 85 : 100}
+                tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
                 style={styles.cardBlur}
               >
                 {/* Connected Audio Device & HUD Trigger */}
@@ -369,8 +383,8 @@ export const SettingsScreen: React.FC = () => {
                   onPress={() => triggerHud(currentDevice)}
                 >
                   <View style={styles.rowLeft}>
-                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(0, 242, 254, 0.14)' : 'rgba(0, 180, 216, 0.1)' }]}>
-                      <Ionicons name="headset" size={17} color={colors.accentCyan} />
+                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}>
+                      <Ionicons name="headset" size={17} color={isDark ? '#FFFFFF' : colors.primary} />
                     </View>
                     <View>
                       <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>
@@ -382,10 +396,10 @@ export const SettingsScreen: React.FC = () => {
                     </View>
                   </View>
                   <View style={styles.rowRight}>
-                    <Text style={[styles.badgePillText, { color: colors.accentCyan }]}>
+                    <Text style={[styles.badgePillText, { color: isDark ? '#FFFFFF' : colors.primary }]}>
                       Test HUD
                     </Text>
-                    <Ionicons name="play-circle" size={18} color={colors.accentCyan} />
+                    <Ionicons name="play-circle" size={18} color={isDark ? '#FFFFFF' : colors.primary} />
                   </View>
                 </TouchableOpacity>
 
@@ -398,8 +412,8 @@ export const SettingsScreen: React.FC = () => {
                   onPress={handleCycleAudioQuality}
                 >
                   <View style={styles.rowLeft}>
-                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.14)' : 'rgba(16, 185, 129, 0.1)' }]}>
-                      <Ionicons name="sparkles" size={17} color="#10B981" />
+                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}>
+                      <Ionicons name="sparkles" size={17} color={isDark ? '#FFFFFF' : colors.primary} />
                     </View>
                     <View>
                       <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>
@@ -411,7 +425,7 @@ export const SettingsScreen: React.FC = () => {
                     </View>
                   </View>
                   <View style={styles.rowRight}>
-                    <Text style={[styles.rowValue, { color: '#10B981', fontWeight: '800' }]}>
+                    <Text style={[styles.rowValue, { color: isDark ? '#FFFFFF' : colors.primary, fontWeight: '800' }]}>
                       {(settings?.preferredAudioQuality || 'm4a').toUpperCase()}
                     </Text>
                     <Ionicons name="swap-horizontal" size={16} color={colors.textMuted} />
@@ -427,8 +441,8 @@ export const SettingsScreen: React.FC = () => {
                   onPress={() => setShowSleepModal(true)}
                 >
                   <View style={styles.rowLeft}>
-                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.14)' : 'rgba(245, 158, 11, 0.1)' }]}>
-                      <Ionicons name="moon" size={17} color="#F59E0B" />
+                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}>
+                      <Ionicons name="moon" size={17} color={isDark ? '#FFFFFF' : colors.primary} />
                     </View>
                     <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>
                       Sleep Timer
@@ -454,15 +468,15 @@ export const SettingsScreen: React.FC = () => {
               style={[
                 styles.unifiedCard,
                 {
-                  backgroundColor: isDark ? 'rgba(10, 18, 28, 0.55)' : 'rgba(255, 255, 255, 0.75)',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : '#FFFFFF',
-                  shadowColor: isDark ? '#000' : '#8CA0BA',
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.75)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : '#FFFFFF',
+                  shadowColor: '#000',
                 },
               ]}
             >
               <BlurView
-                intensity={Platform.OS === 'ios' ? 70 : 100}
-                tint={isDark ? 'dark' : 'light'}
+                intensity={Platform.OS === 'ios' ? 85 : 100}
+                tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
                 style={styles.cardBlur}
               >
                 {/* Storage Header */}
@@ -475,8 +489,8 @@ export const SettingsScreen: React.FC = () => {
                       {storageUsage.trackCount} offline {storageUsage.trackCount === 1 ? 'track' : 'tracks'} stored
                     </Text>
                   </View>
-                  <View style={[styles.storageBadge, { backgroundColor: isDark ? 'rgba(255, 51, 92, 0.15)' : 'rgba(255, 46, 85, 0.1)' }]}>
-                    <Ionicons name="folder-outline" size={16} color={colors.primary} />
+                  <View style={[styles.storageBadge, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]}>
+                    <Ionicons name="folder-outline" size={16} color={isDark ? '#FFFFFF' : colors.primary} />
                   </View>
                 </View>
 
@@ -489,8 +503,8 @@ export const SettingsScreen: React.FC = () => {
                   onPress={handleAutoScanStorage}
                 >
                   <View style={styles.rowLeft}>
-                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(0, 242, 254, 0.14)' : 'rgba(0, 180, 216, 0.1)' }]}>
-                      <Ionicons name="scan" size={17} color={colors.accentCyan} />
+                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}>
+                      <Ionicons name="scan" size={17} color={isDark ? '#FFFFFF' : colors.primary} />
                     </View>
                     <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>
                       Auto-Scan Phone for Audio
@@ -508,8 +522,8 @@ export const SettingsScreen: React.FC = () => {
                   onPress={handleImportFiles}
                 >
                   <View style={styles.rowLeft}>
-                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(139, 92, 246, 0.14)' : 'rgba(139, 92, 246, 0.1)' }]}>
-                      <Ionicons name="folder-open" size={17} color="#A855F7" />
+                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}>
+                      <Ionicons name="folder-open" size={17} color={isDark ? '#FFFFFF' : colors.primary} />
                     </View>
                     <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>
                       Browse & Select Audio Files
@@ -549,15 +563,15 @@ export const SettingsScreen: React.FC = () => {
               style={[
                 styles.unifiedCard,
                 {
-                  backgroundColor: isDark ? 'rgba(10, 18, 28, 0.55)' : 'rgba(255, 255, 255, 0.75)',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : '#FFFFFF',
-                  shadowColor: isDark ? '#000' : '#8CA0BA',
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.75)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : '#FFFFFF',
+                  shadowColor: '#000',
                 },
               ]}
             >
               <BlurView
-                intensity={Platform.OS === 'ios' ? 70 : 100}
-                tint={isDark ? 'dark' : 'light'}
+                intensity={Platform.OS === 'ios' ? 85 : 100}
+                tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
                 style={styles.cardBlur}
               >
                 <View style={styles.brandRow}>
@@ -570,7 +584,7 @@ export const SettingsScreen: React.FC = () => {
                     style={{ width: 140, height: 24 }}
                     resizeMode="contain"
                   />
-                  <Text style={[styles.appVersionTag, { color: colors.primary }]}>v1.2.0</Text>
+                  <Text style={[styles.appVersionTag, { color: isDark ? '#FFFFFF' : colors.primary }]}>v1.2.1</Text>
                 </View>
 
                 <View style={[styles.cardDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]} />
@@ -596,8 +610,8 @@ export const SettingsScreen: React.FC = () => {
                   onPress={() => setShowDiagnosticsModal(true)}
                 >
                   <View style={styles.rowLeft}>
-                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(0, 242, 254, 0.14)' : 'rgba(0, 180, 216, 0.1)' }]}>
-                      <Ionicons name="terminal" size={17} color={colors.primary} />
+                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}>
+                      <Ionicons name="terminal" size={17} color={isDark ? '#FFFFFF' : colors.primary} />
                     </View>
                     <View>
                       <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>

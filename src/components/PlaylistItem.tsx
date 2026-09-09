@@ -25,20 +25,20 @@ export const PlaylistItem: React.FC<PlaylistItemProps> = ({
       style={[
         styles.outerWrapper,
         {
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.85)',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.20)' : 'rgba(255, 255, 255, 0.85)',
           shadowColor: isDark ? '#000' : '#8CA0BA',
         },
       ]}
     >
       <BlurView
-        intensity={Platform.OS === 'ios' ? 70 : 100}
-        tint={isDark ? 'dark' : 'light'}
+        intensity={Platform.OS === 'ios' ? 85 : 100}
+        tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
         style={styles.blurContainer}
       >
         <LinearGradient
           colors={
             isDark
-              ? ['rgba(255, 255, 255, 0.05)', 'rgba(255, 255, 255, 0.02)', 'transparent']
+              ? ['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.03)', 'transparent']
               : ['rgba(255, 255, 255, 0.8)', 'rgba(240, 246, 255, 0.5)', 'rgba(230, 240, 255, 0.3)']
           }
           start={{ x: 0, y: 0 }}

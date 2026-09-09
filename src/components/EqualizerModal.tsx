@@ -48,24 +48,13 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ visible, onClose
       onRequestClose={onClose}
     >
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Ambient Top Glow */}
-        <LinearGradient
-          colors={
-            isDark
-              ? ['rgba(255, 51, 92, 0.25)', 'rgba(139, 92, 246, 0.15)', 'transparent']
-              : ['rgba(255, 46, 85, 0.18)', 'rgba(0, 180, 216, 0.1)', 'transparent']
-          }
-          style={styles.ambientGlow}
-          pointerEvents="none"
-        />
-
         <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
 
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTitleRow}>
             <View style={styles.iconCircle}>
-              <Ionicons name="options-outline" size={20} color={colors.primary} />
+              <Ionicons name="options-outline" size={20} color={isDark ? '#FFFFFF' : colors.primary} />
             </View>
             <View>
               <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Audio Equalizer</Text>
@@ -98,14 +87,14 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ visible, onClose
             style={[
               styles.curveCard,
               {
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
-                shadowColor: isDark ? colors.primary : '#8CA0BA',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.85)',
+                shadowColor: '#000',
               },
             ]}
           >
             <BlurView
-              intensity={Platform.OS === 'ios' ? 70 : 100}
-              tint={isDark ? 'dark' : 'light'}
+              intensity={Platform.OS === 'ios' ? 85 : 100}
+              tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
               style={styles.curveCardBlur}
             >
               <View style={styles.curveHeader}>
@@ -117,7 +106,7 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ visible, onClose
                     styles.enableTogglePill,
                     {
                       backgroundColor: isEqEnabled
-                        ? colors.primary
+                        ? (isDark ? '#FFFFFF' : colors.primary)
                         : isDark
                         ? 'rgba(255, 255, 255, 0.1)'
                         : 'rgba(0, 0, 0, 0.08)',
@@ -125,7 +114,7 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ visible, onClose
                   ]}
                   onPress={() => setIsEqEnabled(!isEqEnabled)}
                 >
-                  <Text style={styles.enableToggleText}>
+                  <Text style={[styles.enableToggleText, { color: isEqEnabled ? (isDark ? '#070A10' : '#FFFFFF') : colors.textMuted }]}>
                     {isEqEnabled ? 'Active' : 'Disabled'}
                   </Text>
                 </TouchableOpacity>
@@ -140,23 +129,19 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ visible, onClose
                   return (
                     <View key={index} style={styles.chartCol}>
                       <View style={styles.chartBarWrapper}>
-                        <LinearGradient
-                          colors={
-                            isPositive
-                              ? [colors.primary, '#FF007A']
-                              : ['#7928CA', colors.primaryLight]
-                          }
+                        <View
                           style={[
                             styles.chartBar,
                             {
                               height: normalizedHeight,
-                              opacity: isEqEnabled ? 1 : 0.35,
+                              backgroundColor: isDark ? '#FFFFFF' : colors.primary,
+                              opacity: isEqEnabled ? 0.9 : 0.25,
                               transform: [{ translateY: isPositive ? -normalizedHeight / 2 : normalizedHeight / 2 }],
                             },
                           ]}
                         />
                       </View>
-                      <Text style={[styles.chartGainText, { color: isEqEnabled ? colors.primary : colors.textMuted }]}>
+                      <Text style={[styles.chartGainText, { color: isEqEnabled ? (isDark ? '#FFFFFF' : colors.primary) : colors.textMuted }]}>
                         {gain > 0 ? `+${gain}` : `${gain}`}dB
                       </Text>
                     </View>
@@ -172,7 +157,7 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ visible, onClose
               Ready-Made Presets
             </Text>
             <TouchableOpacity onPress={resetEqToFlat}>
-              <Text style={[styles.resetActionText, { color: colors.primary }]}>Reset Flat</Text>
+              <Text style={[styles.resetActionText, { color: isDark ? '#FFFFFF' : colors.primary }]}>Reset Flat</Text>
             </TouchableOpacity>
           </View>
 
@@ -191,13 +176,13 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ visible, onClose
                     {
                       backgroundColor: isSelected
                         ? isDark
-                          ? 'rgba(255, 51, 92, 0.22)'
-                          : 'rgba(255, 46, 85, 0.14)'
+                          ? 'rgba(255, 255, 255, 0.16)'
+                          : 'rgba(0, 0, 0, 0.08)'
                         : isDark
                         ? 'rgba(255, 255, 255, 0.06)'
                         : 'rgba(255, 255, 255, 0.7)',
                       borderColor: isSelected
-                        ? colors.primary
+                        ? (isDark ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.2)')
                         : isDark
                         ? 'rgba(255, 255, 255, 0.1)'
                         : '#FFFFFF',
@@ -210,7 +195,7 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ visible, onClose
                   <Text
                     style={[
                       styles.presetChipText,
-                      { color: isSelected ? colors.primary : colors.textSecondary },
+                      { color: isSelected ? (isDark ? '#FFFFFF' : '#000000') : colors.textSecondary },
                       isSelected && styles.activePresetText,
                     ]}
                   >
@@ -262,8 +247,8 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ visible, onClose
                           backgroundColor:
                             gain !== 0
                               ? isDark
-                                ? 'rgba(255, 51, 92, 0.2)'
-                                : 'rgba(255, 46, 85, 0.12)'
+                                ? 'rgba(255, 255, 255, 0.16)'
+                                : 'rgba(15, 23, 42, 0.08)'
                               : isDark
                               ? 'rgba(255, 255, 255, 0.08)'
                               : 'rgba(0, 0, 0, 0.04)',
@@ -289,11 +274,11 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ visible, onClose
                     maximumValue={12}
                     step={1}
                     value={gain}
-                    minimumTrackTintColor={colors.primary}
+                    minimumTrackTintColor={isDark ? '#FFFFFF' : '#0F172A'}
                     maximumTrackTintColor={
                       isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)'
                     }
-                    thumbTintColor={colors.primary}
+                    thumbTintColor={isDark ? '#FFFFFF' : '#0F172A'}
                     onValueChange={(val) => updateBandGain(freq.key, val)}
                   />
 

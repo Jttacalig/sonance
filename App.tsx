@@ -29,9 +29,12 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { CustomizationProvider } from './src/context/CustomizationContext';
 import { LibraryProvider } from './src/context/LibraryContext';
 import { PlayerProvider } from './src/context/PlayerContext';
-import { DownloadProvider } from './src/context/DownloadContext';
+import { DownloadProvider, useDownloads } from './src/context/DownloadContext';
 import { AudioRouteProvider } from './src/context/AudioRouteContext';
 import { HeadphoneHud } from './src/components/HeadphoneHud';
+import { GlobalDownloadIndicator } from './src/components/GlobalDownloadIndicator';
+import { ActiveDownloadsModal } from './src/components/ActiveDownloadsModal';
+import { GlassThemeTransitionVeil } from './src/components/GlassThemeTransitionVeil';
 import { LibraryScreen } from './src/screens/LibraryScreen';
 import { DownloaderScreen } from './src/screens/DownloaderScreen';
 import { PlaylistsScreen } from './src/screens/PlaylistsScreen';
@@ -74,6 +77,7 @@ const TABS: { id: Tab; label: string; icon: any; activeIcon: any }[] = [
 
 function MainNavigator() {
   const { colors, isDark } = useTheme();
+  const { activeCount } = useDownloads();
   const [activeTab, setActiveTab] = useState<Tab>('library');
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
   const [barWidth, setBarWidth] = useState<number>(0);
@@ -210,7 +214,11 @@ function MainNavigator() {
         barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
         translucent
+        animated={true}
       />
+
+      {/* Global Dynamic Floating Download Pill */}
+      <GlobalDownloadIndicator />
 
       {/* iOS 26 Dynamic Liquid Headphone HUD */}
       <HeadphoneHud />
@@ -218,48 +226,54 @@ function MainNavigator() {
       {/* Screen Content with Smooth Page Transitions */}
       <View style={styles.contentContainer}>{renderScreenContent()}</View>
 
+      {/* Global Eye-Comfort Frosted Glass Theme Transition Veil */}
+      <GlassThemeTransitionVeil />
+
       {/* Floating Liquid Mini Player above Floating Pill Bar */}
       <MiniPlayer bottomOffset={miniPlayerBottom} />
 
       {/* Full Player Modal */}
       <FullPlayerModal />
 
-      {/* Floating Liquid Pill Dock Navigation Bar with Gliding Active Pill */}
+      {/* Global Active Downloads Modal */}
+      <ActiveDownloadsModal />
+
+      {/* Floating Crystal Clear Liquid Glass Pill Navigation Bar */}
       <View
         style={[
           styles.floatingPillWrapper,
           {
             bottom: floatingPillBottom,
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.95)',
-            shadowColor: isDark ? '#00F2FE' : '#8CA0BA',
-            shadowOpacity: isDark ? 0.35 : 0.22,
-            shadowRadius: isDark ? 16 : 12,
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.24)' : 'rgba(255, 255, 255, 0.95)',
+            shadowColor: '#000',
+            shadowOpacity: isDark ? 0.45 : 0.16,
+            shadowRadius: isDark ? 20 : 14,
           },
         ]}
       >
         <BlurView
-          intensity={Platform.OS === 'ios' ? 75 : 100}
-          tint={isDark ? 'dark' : 'light'}
+          intensity={Platform.OS === 'ios' ? 85 : 100}
+          tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
           style={styles.pillBlur}
         >
-          {/* Subtle Liquid Glass Specular Gradient */}
+          {/* Crystal Clear Glass Sheen */}
           <LinearGradient
             colors={
               isDark
-                ? ['rgba(255, 255, 255, 0.12)', 'rgba(0, 242, 254, 0.05)', 'rgba(10, 18, 28, 0.6)']
-                : ['rgba(255, 255, 255, 0.95)', 'rgba(240, 246, 255, 0.7)', 'rgba(225, 238, 255, 0.45)']
+                ? ['rgba(255, 255, 255, 0.16)', 'rgba(255, 255, 255, 0.04)', 'rgba(255, 255, 255, 0.01)']
+                : ['rgba(255, 255, 255, 0.95)', 'rgba(245, 248, 255, 0.7)']
             }
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            end={{ x: 0, y: 1 }}
             style={StyleSheet.absoluteFill}
           />
 
-          {/* Reference Style: Top Cyan Rim Light Reflection */}
+          {/* Top Specular Edge Highlight Line */}
           <LinearGradient
             colors={
               isDark
-                ? ['rgba(0, 242, 254, 0.65)', 'rgba(56, 189, 248, 0.3)', 'transparent']
-                : ['rgba(255, 255, 255, 0.95)', 'rgba(0, 180, 216, 0.3)', 'transparent']
+                ? ['rgba(255, 255, 255, 0.70)', 'rgba(255, 255, 255, 0.20)', 'transparent']
+                : ['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.25)', 'transparent']
             }
             start={{ x: 0.1, y: 0 }}
             end={{ x: 0.9, y: 0 }}
@@ -267,7 +281,7 @@ function MainNavigator() {
           />
 
           <View style={styles.pillTabBar} onLayout={handleBarLayout}>
-            {/* Smooth Gliding Active Pill Indicator */}
+            {/* Smooth Gliding Crystal Frosted Lens Pill */}
             {tabItemWidth > 0 && (
               <Animated.View
                 style={[
@@ -275,17 +289,17 @@ function MainNavigator() {
                   indicatorAnimatedStyle,
                   {
                     borderColor: isDark
-                      ? 'rgba(0, 242, 254, 0.5)'
-                      : 'rgba(255, 46, 85, 0.4)',
-                    shadowColor: isDark ? '#00F2FE' : colors.primary,
+                      ? 'rgba(255, 255, 255, 0.45)'
+                      : 'rgba(0, 0, 0, 0.08)',
+                    shadowColor: '#000',
                   },
                 ]}
               >
                 <LinearGradient
                   colors={
                     isDark
-                      ? ['rgba(0, 242, 254, 0.25)', 'rgba(14, 116, 144, 0.15)']
-                      : ['rgba(255, 46, 85, 0.18)', 'rgba(255, 0, 122, 0.12)']
+                      ? ['rgba(255, 255, 255, 0.28)', 'rgba(255, 255, 255, 0.10)']
+                      : ['rgba(255, 255, 255, 0.95)', 'rgba(240, 246, 255, 0.75)']
                   }
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -297,6 +311,7 @@ function MainNavigator() {
             {/* Tab Items */}
             {TABS.map((tab, idx) => {
               const isActive = activeTab === tab.id;
+              const tabColor = isActive ? (isDark ? '#FFFFFF' : '#0F172A') : colors.textMuted;
               return (
                 <TouchableOpacity
                   key={tab.id}
@@ -304,15 +319,37 @@ function MainNavigator() {
                   onPress={() => handleTabPress(tab.id, idx)}
                   activeOpacity={0.75}
                 >
-                  <Ionicons
-                    name={isActive ? tab.activeIcon : tab.icon}
-                    size={21}
-                    color={isActive ? colors.primary : colors.textMuted}
-                  />
+                  <View style={styles.tabIconContainer}>
+                    <Ionicons
+                      name={isActive ? tab.activeIcon : tab.icon}
+                      size={21}
+                      color={tabColor}
+                    />
+                    {tab.id === 'downloader' && activeCount > 0 && (
+                      <View
+                        style={[
+                          styles.tabActiveBadge,
+                          {
+                            backgroundColor: isDark ? '#FFFFFF' : colors.primary,
+                            borderColor: isDark ? '#070A10' : '#FFFFFF',
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.tabActiveBadgeText,
+                            { color: isDark ? '#070A10' : '#FFFFFF' },
+                          ]}
+                        >
+                          {activeCount > 9 ? '9+' : activeCount}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                   <Text
                     style={[
                       styles.pillTabLabel,
-                      { color: isActive ? colors.primary : colors.textMuted },
+                      { color: tabColor },
                       isActive && styles.activePillTabLabel,
                     ]}
                   >
@@ -369,11 +406,11 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     borderRadius: RADIUS.full,
-    borderWidth: 1.6,
+    borderWidth: 1.2,
     overflow: 'hidden',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
+    shadowOpacity: 0.45,
+    shadowRadius: 20,
     elevation: 12,
   },
   pillBlur: {
@@ -393,7 +430,7 @@ const styles = StyleSheet.create({
     top: 6,
     bottom: 6,
     borderRadius: RADIUS.full,
-    borderWidth: 1.3,
+    borderWidth: 1.0,
     overflow: 'hidden',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -418,12 +455,34 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   dockTopRim: {
-    height: 1.5,
+    height: 1.0,
     width: '100%',
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     zIndex: 1,
+  },
+  tabIconContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabActiveBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -10,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1.2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  tabActiveBadgeText: {
+    fontSize: 9,
+    fontWeight: '900',
+    textAlign: 'center',
   },
 });

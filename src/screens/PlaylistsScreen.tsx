@@ -131,13 +131,13 @@ export const PlaylistsScreen: React.FC<PlaylistsScreenProps> = ({ onSelectPlayli
                 styles.badgePill,
                 {
                   backgroundColor: isDark
-                    ? 'rgba(0, 242, 254, 0.14)'
-                    : 'rgba(0, 180, 216, 0.12)',
-                  borderColor: isDark ? 'rgba(0, 242, 254, 0.3)' : 'rgba(0, 180, 216, 0.25)',
+                    ? 'rgba(255, 255, 255, 0.08)'
+                    : 'rgba(0, 0, 0, 0.05)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
                 },
               ]}
             >
-              <Text style={[styles.badgeText, { color: colors.accentCyan }]}>
+              <Text style={[styles.badgeText, { color: colors.textPrimary }]}>
                 {activeTab === 'playlists' ? playlists.length + 4 : folderGroups.length}
               </Text>
             </View>
@@ -150,14 +150,17 @@ export const PlaylistsScreen: React.FC<PlaylistsScreenProps> = ({ onSelectPlayli
               activeOpacity={0.85}
               accessibilityLabel="New Playlist"
             >
-              <LinearGradient
-                colors={[colors.primary, '#FF007A', colors.primaryDark]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={[styles.createBtn, { shadowColor: colors.primary }]}
+              <View
+                style={[
+                  styles.createBtn,
+                  {
+                    backgroundColor: isDark ? '#FFFFFF' : colors.primary,
+                    shadowColor: isDark ? '#FFFFFF' : colors.primary,
+                  },
+                ]}
               >
-                <Ionicons name="add" size={22} color="#FFF" />
-              </LinearGradient>
+                <Ionicons name="add" size={22} color={isDark ? '#070A10' : '#FFF'} />
+              </View>
             </TouchableOpacity>
           )}
         </View>
@@ -168,8 +171,8 @@ export const PlaylistsScreen: React.FC<PlaylistsScreenProps> = ({ onSelectPlayli
             style={[
               styles.tabCapsule,
               {
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)',
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#FFFFFF',
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.20)' : '#FFFFFF',
               },
             ]}
           >
@@ -178,7 +181,7 @@ export const PlaylistsScreen: React.FC<PlaylistsScreenProps> = ({ onSelectPlayli
                 styles.tabBtn,
                 activeTab === 'playlists' && [
                   styles.activeTabBtn,
-                  { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.14)' : '#FFFFFF' },
+                  { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.22)' : '#FFFFFF' },
                 ],
               ]}
               onPress={() => {
@@ -189,7 +192,7 @@ export const PlaylistsScreen: React.FC<PlaylistsScreenProps> = ({ onSelectPlayli
               <Ionicons
                 name="albums-outline"
                 size={16}
-                color={activeTab === 'playlists' ? colors.primary : colors.textMuted}
+                color={activeTab === 'playlists' ? (isDark ? '#FFFFFF' : colors.primary) : colors.textMuted}
               />
               <Text
                 style={[
@@ -207,7 +210,7 @@ export const PlaylistsScreen: React.FC<PlaylistsScreenProps> = ({ onSelectPlayli
                 styles.tabBtn,
                 activeTab === 'folders' && [
                   styles.activeTabBtn,
-                  { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.14)' : '#FFFFFF' },
+                  { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.22)' : '#FFFFFF' },
                 ],
               ]}
               onPress={() => {
@@ -218,7 +221,7 @@ export const PlaylistsScreen: React.FC<PlaylistsScreenProps> = ({ onSelectPlayli
               <Ionicons
                 name="folder-open-outline"
                 size={16}
-                color={activeTab === 'folders' ? colors.accentCyan : colors.textMuted}
+                color={activeTab === 'folders' ? (isDark ? '#FFFFFF' : colors.primary) : colors.textMuted}
               />
               <Text
                 style={[
@@ -242,79 +245,193 @@ export const PlaylistsScreen: React.FC<PlaylistsScreenProps> = ({ onSelectPlayli
               </Text>
             </View>
 
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.smartGridScroll}
-            >
-              {/* Favorites Mix */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => handleOpenSmartPlaylist('smart-favs', 'Favorite Tracks', favorites, 'All your starred tracks')}
-                style={[
-                  styles.smartCard,
-                  {
-                    backgroundColor: isDark ? 'rgba(255, 51, 92, 0.12)' : 'rgba(255, 46, 85, 0.08)',
-                    borderColor: isDark ? 'rgba(255, 51, 92, 0.3)' : 'rgba(255, 46, 85, 0.25)',
-                  },
-                ]}
+            <View style={styles.smartShelfContainer}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.smartGridScroll}
               >
-                <Ionicons name="heart" size={24} color={colors.primary} />
-                <Text style={[styles.smartCardTitle, { color: colors.textPrimary }]}>Favorites</Text>
-                <Text style={[styles.smartCardCount, { color: colors.primary }]}>{favorites.length} songs</Text>
-              </TouchableOpacity>
+                {/* Favorites Mix */}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => handleOpenSmartPlaylist('smart-favs', 'Favorite Tracks', favorites, 'All your starred tracks')}
+                  style={[
+                    styles.smartCard,
+                    {
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.95)',
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.85)',
+                    },
+                  ]}
+                >
+                  <BlurView
+                    intensity={Platform.OS === 'ios' ? 85 : 100}
+                    tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <LinearGradient
+                    colors={
+                      isDark
+                        ? ['rgba(255, 255, 255, 0.16)', 'rgba(255, 255, 255, 0.02)', 'transparent']
+                        : ['rgba(255, 255, 255, 0.95)', 'rgba(240, 246, 255, 0.65)']
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <View
+                    style={[
+                      styles.smartIconBadge,
+                      { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.05)' },
+                    ]}
+                  >
+                    <Ionicons name="heart" size={20} color={isDark ? '#FFFFFF' : colors.primary} />
+                  </View>
+                  <View>
+                    <Text style={[styles.smartCardTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                      Favorites
+                    </Text>
+                    <Text style={[styles.smartCardCount, { color: colors.textSecondary }]} numberOfLines={1}>
+                      {favorites.length} {favorites.length === 1 ? 'song' : 'songs'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
 
-              {/* Recently Added Mix */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => handleOpenSmartPlaylist('smart-recent', 'Recently Added', recentTracks, 'Newest audio imports')}
-                style={[
-                  styles.smartCard,
-                  {
-                    backgroundColor: isDark ? 'rgba(0, 242, 254, 0.12)' : 'rgba(0, 180, 216, 0.08)',
-                    borderColor: isDark ? 'rgba(0, 242, 254, 0.3)' : 'rgba(0, 180, 216, 0.25)',
-                  },
-                ]}
-              >
-                <Ionicons name="time" size={24} color={colors.accentCyan} />
-                <Text style={[styles.smartCardTitle, { color: colors.textPrimary }]}>Recently Added</Text>
-                <Text style={[styles.smartCardCount, { color: colors.accentCyan }]}>{recentTracks.length} songs</Text>
-              </TouchableOpacity>
+                {/* Recently Added Mix */}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => handleOpenSmartPlaylist('smart-recent', 'Recently Added', recentTracks, 'Newest audio imports')}
+                  style={[
+                    styles.smartCard,
+                    {
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.95)',
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.85)',
+                    },
+                  ]}
+                >
+                  <BlurView
+                    intensity={Platform.OS === 'ios' ? 85 : 100}
+                    tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <LinearGradient
+                    colors={
+                      isDark
+                        ? ['rgba(255, 255, 255, 0.16)', 'rgba(255, 255, 255, 0.02)', 'transparent']
+                        : ['rgba(255, 255, 255, 0.95)', 'rgba(240, 246, 255, 0.65)']
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <View
+                    style={[
+                      styles.smartIconBadge,
+                      { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.05)' },
+                    ]}
+                  >
+                    <Ionicons name="time" size={20} color={isDark ? '#FFFFFF' : colors.primary} />
+                  </View>
+                  <View>
+                    <Text style={[styles.smartCardTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                      Recently Added
+                    </Text>
+                    <Text style={[styles.smartCardCount, { color: colors.textSecondary }]} numberOfLines={1}>
+                      {recentTracks.length} {recentTracks.length === 1 ? 'song' : 'songs'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
 
-              {/* Lossless / High-Res Mix */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => handleOpenSmartPlaylist('smart-lossless', 'Lossless Audio', losslessTracks, 'High fidelity streams')}
-                style={[
-                  styles.smartCard,
-                  {
-                    backgroundColor: isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.08)',
-                    borderColor: isDark ? 'rgba(16, 185, 129, 0.3)' : 'rgba(16, 185, 129, 0.25)',
-                  },
-                ]}
-              >
-                <Ionicons name="sparkles" size={24} color="#10B981" />
-                <Text style={[styles.smartCardTitle, { color: colors.textPrimary }]}>Hi-Res Lossless</Text>
-                <Text style={[styles.smartCardCount, { color: '#10B981' }]}>{losslessTracks.length} songs</Text>
-              </TouchableOpacity>
+                {/* Lossless / High-Res Mix */}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => handleOpenSmartPlaylist('smart-lossless', 'Lossless Audio', losslessTracks, 'High fidelity streams')}
+                  style={[
+                    styles.smartCard,
+                    {
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.95)',
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.85)',
+                    },
+                  ]}
+                >
+                  <BlurView
+                    intensity={Platform.OS === 'ios' ? 85 : 100}
+                    tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <LinearGradient
+                    colors={
+                      isDark
+                        ? ['rgba(255, 255, 255, 0.16)', 'rgba(255, 255, 255, 0.02)', 'transparent']
+                        : ['rgba(255, 255, 255, 0.95)', 'rgba(240, 246, 255, 0.65)']
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <View
+                    style={[
+                      styles.smartIconBadge,
+                      { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.05)' },
+                    ]}
+                  >
+                    <Ionicons name="sparkles" size={20} color={isDark ? '#FFFFFF' : colors.primary} />
+                  </View>
+                  <View>
+                    <Text style={[styles.smartCardTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                      Hi-Res Lossless
+                    </Text>
+                    <Text style={[styles.smartCardCount, { color: colors.textSecondary }]} numberOfLines={1}>
+                      {losslessTracks.length} {losslessTracks.length === 1 ? 'song' : 'songs'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
 
-              {/* Heavy Rotation Mix */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => handleOpenSmartPlaylist('smart-rotation', 'Heavy Rotation', mostPlayedTracks, 'Top played offline mixes')}
-                style={[
-                  styles.smartCard,
-                  {
-                    backgroundColor: isDark ? 'rgba(245, 158, 11, 0.12)' : 'rgba(245, 158, 11, 0.08)',
-                    borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : 'rgba(245, 158, 11, 0.25)',
-                  },
-                ]}
-              >
-                <Ionicons name="flame" size={24} color="#F59E0B" />
-                <Text style={[styles.smartCardTitle, { color: colors.textPrimary }]}>Heavy Rotation</Text>
-                <Text style={[styles.smartCardCount, { color: '#F59E0B' }]}>{mostPlayedTracks.length} songs</Text>
-              </TouchableOpacity>
-            </ScrollView>
+                {/* Heavy Rotation Mix */}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => handleOpenSmartPlaylist('smart-rotation', 'Heavy Rotation', mostPlayedTracks, 'Top played offline mixes')}
+                  style={[
+                    styles.smartCard,
+                    {
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.95)',
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.85)',
+                    },
+                  ]}
+                >
+                  <BlurView
+                    intensity={Platform.OS === 'ios' ? 85 : 100}
+                    tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <LinearGradient
+                    colors={
+                      isDark
+                        ? ['rgba(255, 255, 255, 0.16)', 'rgba(255, 255, 255, 0.02)', 'transparent']
+                        : ['rgba(255, 255, 255, 0.95)', 'rgba(240, 246, 255, 0.65)']
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <View
+                    style={[
+                      styles.smartIconBadge,
+                      { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.05)' },
+                    ]}
+                  >
+                    <Ionicons name="flame" size={20} color={isDark ? '#FFFFFF' : colors.primary} />
+                  </View>
+                  <View>
+                    <Text style={[styles.smartCardTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                      Heavy Rotation
+                    </Text>
+                    <Text style={[styles.smartCardCount, { color: colors.textSecondary }]} numberOfLines={1}>
+                      {mostPlayedTracks.length} {mostPlayedTracks.length === 1 ? 'song' : 'songs'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
 
             {/* Custom User Playlists Section */}
             <View style={[styles.sectionHeader, { marginTop: SPACING.md }]}>
@@ -368,12 +485,12 @@ export const PlaylistsScreen: React.FC<PlaylistsScreenProps> = ({ onSelectPlayli
                     style={[
                       styles.folderIconSquare,
                       {
-                        backgroundColor: isDark ? 'rgba(0, 242, 254, 0.15)' : 'rgba(0, 180, 216, 0.12)',
-                        borderColor: isDark ? 'rgba(0, 242, 254, 0.3)' : 'rgba(0, 180, 216, 0.25)',
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.08)',
                       },
                     ]}
                   >
-                    <Ionicons name="folder" size={22} color={colors.accentCyan} />
+                    <Ionicons name="folder" size={22} color={isDark ? '#FFFFFF' : colors.primary} />
                   </View>
 
                   <View style={styles.folderDetails}>
@@ -386,11 +503,17 @@ export const PlaylistsScreen: React.FC<PlaylistsScreenProps> = ({ onSelectPlayli
                   </View>
 
                   <TouchableOpacity
-                    style={[styles.playFolderBtn, { backgroundColor: colors.primary }]}
+                    style={[
+                      styles.playFolderBtn,
+                      {
+                        backgroundColor: isDark ? '#FFFFFF' : colors.primary,
+                        shadowColor: isDark ? '#FFFFFF' : colors.primary,
+                      },
+                    ]}
                     onPress={() => handlePlayFolder(item.name, item.tracks)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Ionicons name="play" size={16} color="#FFF" style={{ marginLeft: 2 }} />
+                    <Ionicons name="play" size={16} color={isDark ? '#070A10' : '#FFF'} style={{ marginLeft: 2 }} />
                   </TouchableOpacity>
                 </TouchableOpacity>
               </View>
@@ -502,26 +625,43 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.6,
   },
+  smartShelfContainer: {
+    marginHorizontal: -SPACING.lg,
+  },
   smartGridScroll: {
-    gap: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    gap: 12,
     paddingVertical: SPACING.xs,
   },
   smartCard: {
-    width: 140,
+    width: 154,
+    minHeight: 126,
     padding: SPACING.md,
-    borderRadius: RADIUS.clay,
+    borderRadius: RADIUS.lg,
     borderWidth: 1.2,
+    overflow: 'hidden', // CRITICAL FIX: prevents absolute BlurView and gradients from bleeding outside rounded corners
     justifyContent: 'space-between',
-    gap: 6,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  smartIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   smartCardTitle: {
     fontSize: 14,
     fontWeight: '800',
-    marginTop: 4,
+    marginBottom: 2,
   },
   smartCardCount: {
-    fontSize: 11.5,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
   },
   emptyContainer: {
     alignItems: 'center',

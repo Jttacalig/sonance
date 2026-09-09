@@ -189,10 +189,10 @@ export const SyncedLyricsView: React.FC<SyncedLyricsViewProps> = ({
                   styles.lyricText,
                   {
                     color: isActive
-                      ? '#FFFFFF'
+                      ? (isDark ? '#FFFFFF' : colors.primary)
                       : isPassed
-                      ? (isDark ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.35)')
-                      : (isDark ? 'rgba(255, 255, 255, 0.65)' : 'rgba(0, 0, 0, 0.6)'),
+                      ? (isDark ? 'rgba(255, 255, 255, 0.40)' : 'rgba(15, 23, 42, 0.35)')
+                      : (isDark ? 'rgba(255, 255, 255, 0.70)' : 'rgba(15, 23, 42, 0.70)'),
                     fontSize: isActive ? 23 : 19,
                     fontWeight: isActive ? '800' : '600',
                   },

@@ -48,10 +48,10 @@ export const StoragePermissionModal: React.FC<StoragePermissionModalProps> = ({
                 styles.modalCard,
                 {
                   backgroundColor: isDark
-                    ? 'rgba(18, 24, 38, 0.92)'
+                    ? 'rgba(10, 16, 28, 0.88)'
                     : 'rgba(255, 255, 255, 0.94)',
                   borderColor: isDark
-                    ? 'rgba(255, 255, 255, 0.15)'
+                    ? 'rgba(255, 255, 255, 0.22)'
                     : 'rgba(255, 255, 255, 0.9)',
                   shadowColor: isDark ? colors.primary : '#8CA0BA',
                 },
@@ -59,19 +59,22 @@ export const StoragePermissionModal: React.FC<StoragePermissionModalProps> = ({
             >
               <BlurView
                 intensity={Platform.OS === 'ios' ? 85 : 100}
-                tint={isDark ? 'dark' : 'light'}
+                tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
                 style={styles.cardBlur}
               >
                 {/* Glowing Icon Header */}
                 <View style={styles.iconContainer}>
-                  <LinearGradient
-                    colors={[colors.primary, '#FF007A', '#7928CA']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.iconGradient}
+                  <View
+                    style={[
+                      styles.iconGradient,
+                      {
+                        backgroundColor: isDark ? '#FFFFFF' : colors.primary,
+                        shadowColor: '#000',
+                      },
+                    ]}
                   >
-                    <Ionicons name="folder-open" size={36} color="#FFF" />
-                  </LinearGradient>
+                    <Ionicons name="folder-open" size={32} color={isDark ? '#070A10' : '#FFF'} />
+                  </View>
                 </View>
 
                 <Text style={[styles.title, { color: colors.textPrimary }]}>
@@ -131,10 +134,10 @@ export const StoragePermissionModal: React.FC<StoragePermissionModalProps> = ({
                     <View
                       style={[
                         styles.featureIconBadge,
-                        { backgroundColor: 'rgba(0, 229, 255, 0.15)' },
+                        { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)' },
                       ]}
                     >
-                      <Ionicons name="airplane" size={18} color={colors.accentCyan} />
+                      <Ionicons name="airplane" size={18} color={isDark ? '#FFFFFF' : colors.primary} />
                     </View>
                     <View style={styles.featureTextContainer}>
                       <Text style={[styles.featureTitle, { color: colors.textPrimary }]}>
@@ -162,10 +165,10 @@ export const StoragePermissionModal: React.FC<StoragePermissionModalProps> = ({
                     <View
                       style={[
                         styles.featureIconBadge,
-                        { backgroundColor: 'rgba(255, 46, 85, 0.15)' },
+                        { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)' },
                       ]}
                     >
-                      <Ionicons name="share-social-outline" size={18} color={colors.primary} />
+                      <Ionicons name="share-social-outline" size={18} color={isDark ? '#FFFFFF' : colors.primary} />
                     </View>
                     <View style={styles.featureTextContainer}>
                       <Text style={[styles.featureTitle, { color: colors.textPrimary }]}>
@@ -184,15 +187,18 @@ export const StoragePermissionModal: React.FC<StoragePermissionModalProps> = ({
                   onPress={handleAllow}
                   activeOpacity={0.85}
                 >
-                  <LinearGradient
-                    colors={[colors.primary, '#FF007A', colors.primaryDark]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={[styles.allowBtn, { shadowColor: colors.primary }]}
+                  <View
+                    style={[
+                      styles.allowBtn,
+                      {
+                        backgroundColor: isDark ? '#FFFFFF' : colors.primary,
+                        shadowColor: isDark ? '#FFFFFF' : colors.primary,
+                      },
+                    ]}
                   >
-                    <Ionicons name="checkmark-circle" size={20} color="#FFF" />
-                    <Text style={styles.allowBtnText}>Allow Access &amp; Save Music</Text>
-                  </LinearGradient>
+                    <Ionicons name="checkmark-circle" size={20} color={isDark ? '#070A10' : '#FFF'} />
+                    <Text style={[styles.allowBtnText, { color: isDark ? '#070A10' : '#FFF' }]}>Allow Access &amp; Save Music</Text>
+                  </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity

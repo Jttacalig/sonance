@@ -96,14 +96,17 @@ export const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({
                 activeOpacity={0.8}
                 accessibilityLabel="Play All"
               >
-                <LinearGradient
-                  colors={[colors.primary, '#FF007A', colors.primaryDark]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={[styles.playIconBtn, { shadowColor: colors.primary }]}
+                <View
+                  style={[
+                    styles.playIconBtn,
+                    {
+                      backgroundColor: isDark ? '#FFFFFF' : colors.primary,
+                      shadowColor: isDark ? '#FFFFFF' : colors.primary,
+                    },
+                  ]}
                 >
-                  <Ionicons name="play" size={16} color="#FFF" style={{ marginLeft: 2 }} />
-                </LinearGradient>
+                  <Ionicons name="play" size={16} color={isDark ? '#070A10' : '#FFF'} style={{ marginLeft: 2 }} />
+                </View>
               </TouchableOpacity>
 
               <TouchableOpacity

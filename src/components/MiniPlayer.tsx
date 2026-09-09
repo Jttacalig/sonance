@@ -264,12 +264,12 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
   return (
     <Animated.View
       {...panResponder.panHandlers}
-      style={[
+        style={[
         styles.wrapper,
         {
           bottom: bottomOffset,
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.95)',
-          shadowColor: isDark ? colors.primary : '#8CA0BA',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.26)' : 'rgba(255, 255, 255, 0.95)',
+          shadowColor: '#000',
           transform: [
             { translateX: pan.x },
             { translateY: pan.y },
@@ -280,19 +280,19 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
       ]}
     >
       <BlurView
-        intensity={Platform.OS === 'ios' ? 95 : 100}
-        tint={isDark ? 'dark' : 'light'}
+        intensity={Platform.OS === 'ios' ? 85 : 100}
+        tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
         style={styles.blurWrapper}
       >
-        {/* iOS 26 Specular Liquid Glass Sheen */}
+        {/* Crystal Clear Liquid Glass Sheen */}
         <LinearGradient
           colors={
             isDark
-              ? ['rgba(255, 255, 255, 0.16)', 'rgba(255, 51, 92, 0.08)', 'rgba(20, 28, 43, 0.55)']
-              : ['rgba(255, 255, 255, 0.95)', 'rgba(240, 246, 255, 0.7)', 'rgba(225, 238, 255, 0.45)']
+              ? ['rgba(255, 255, 255, 0.16)', 'rgba(255, 255, 255, 0.04)', 'rgba(255, 255, 255, 0.01)']
+              : ['rgba(255, 255, 255, 0.95)', 'rgba(245, 248, 255, 0.7)']
           }
           start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          end={{ x: 0, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
 
@@ -300,8 +300,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
         <LinearGradient
           colors={
             isDark
-              ? ['rgba(255, 255, 255, 0.35)', 'rgba(255, 255, 255, 0.05)', 'transparent']
-              : ['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.3)', 'transparent']
+              ? ['rgba(255, 255, 255, 0.65)', 'rgba(255, 255, 255, 0.18)', 'transparent']
+              : ['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.25)', 'transparent']
           }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
@@ -312,14 +312,17 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
         <View
           style={[
             styles.progressBarBackground,
-            { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)' },
+            { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)' },
           ]}
         >
-          <LinearGradient
-            colors={[colors.primary, '#FF007A', '#00F2FE']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={[styles.progressBarFill, { width: `${progress * 100}%` }]}
+          <View
+            style={[
+              styles.progressBarFill,
+              {
+                width: `${progress * 100}%`,
+                backgroundColor: isDark ? '#FFFFFF' : '#0F172A',
+              },
+            ]}
           />
         </View>
 
@@ -333,7 +336,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
             style={[
               styles.artContainer,
               {
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : '#FFFFFF',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.28)' : '#FFFFFF',
               },
             ]}
           >
@@ -341,10 +344,10 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
               <Image source={{ uri: currentTrack.artworkUri }} style={styles.artwork} />
             ) : (
               <LinearGradient
-                colors={isDark ? ['#1E293B', '#0F172A'] : ['#E2E8F0', '#CBD5E1']}
+                colors={isDark ? ['rgba(255, 255, 255, 0.18)', 'rgba(255, 255, 255, 0.06)'] : ['#E2E8F0', '#CBD5E1']}
                 style={styles.placeholderArt}
               >
-                <Ionicons name="musical-note" size={18} color={colors.primary} />
+                <Ionicons name="musical-note" size={18} color={isDark ? '#FFFFFF' : '#0F172A'} />
               </LinearGradient>
             )}
           </View>
@@ -356,12 +359,12 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
                 {currentTrack.title}
               </Text>
 
-              {/* Seamless Clean Floating Visualizer (No Pill Box) */}
+              {/* Seamless Clean Floating Visualizer */}
               <View style={styles.visualizerRow}>
-                <VisualizerBar isPlaying={isPlaying} delay={0} color={colors.primary} maxHeight={16} />
-                <VisualizerBar isPlaying={isPlaying} delay={90} color={colors.primary} maxHeight={16} />
-                <VisualizerBar isPlaying={isPlaying} delay={180} color={colors.primary} maxHeight={16} />
-                <VisualizerBar isPlaying={isPlaying} delay={60} color={colors.primary} maxHeight={16} />
+                <VisualizerBar isPlaying={isPlaying} delay={0} color={isDark ? '#FFFFFF' : '#0F172A'} maxHeight={16} />
+                <VisualizerBar isPlaying={isPlaying} delay={90} color={isDark ? '#FFFFFF' : '#0F172A'} maxHeight={16} />
+                <VisualizerBar isPlaying={isPlaying} delay={180} color={isDark ? '#FFFFFF' : '#0F172A'} maxHeight={16} />
+                <VisualizerBar isPlaying={isPlaying} delay={60} color={isDark ? '#FFFFFF' : '#0F172A'} maxHeight={16} />
               </View>
             </View>
 
@@ -384,39 +387,37 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
                 e.stopPropagation();
                 togglePlayPause();
               }}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <LinearGradient
-                colors={isDark ? ['#00F2FE', '#0099FF', '#FF335C'] : [colors.primary, '#FF007A', colors.primaryDark]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+              <View
                 style={[
                   styles.playBtn,
                   {
-                    shadowColor: isDark ? '#00F2FE' : colors.primary,
+                    backgroundColor: isDark ? '#FFFFFF' : '#0F172A',
+                    shadowColor: '#000',
                   },
                 ]}
               >
                 {isLoading ? (
-                  <Ionicons name="sync-outline" size={18} color="#FFF" />
+                  <Ionicons name="sync-outline" size={18} color={isDark ? '#000000' : '#FFFFFF'} />
                 ) : (
                   <Ionicons
                     name={isPlaying ? 'pause' : 'play'}
                     size={18}
-                    color="#FFF"
+                    color={isDark ? '#000000' : '#FFFFFF'}
                     style={isPlaying ? {} : { marginLeft: 2 }}
                   />
                 )}
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
                 styles.circularGlassBtn,
                 {
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.08)',
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.85)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.06)',
                 },
               ]}
               onPress={(e) => {
@@ -433,8 +434,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
               style={[
                 styles.closeGlassBtn,
                 {
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.08)',
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)',
                 },
               ]}
               onPress={(e) => {

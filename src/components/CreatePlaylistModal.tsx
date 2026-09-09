@@ -123,7 +123,14 @@ export const CreatePlaylistModal: React.FC<CreatePlaylistModalProps> = ({
               onPress={handleCreate}
               disabled={!name.trim()}
             >
-              <Text style={styles.createText}>Create</Text>
+              <Text
+                style={[
+                  styles.createText,
+                  { color: isDark && colors.primary === '#FFFFFF' ? '#070A10' : '#FFFFFF' },
+                ]}
+              >
+                Create
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

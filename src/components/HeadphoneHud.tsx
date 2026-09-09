@@ -123,21 +123,21 @@ export const HeadphoneHud: React.FC = () => {
         style={[
           styles.capsuleWrapper,
           {
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.95)',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.26)' : 'rgba(255, 255, 255, 0.95)',
             shadowColor: isDark ? '#000' : '#8CA0BA',
           },
         ]}
       >
         <BlurView
-          intensity={Platform.OS === 'ios' ? 75 : 100}
-          tint={isDark ? 'dark' : 'light'}
+          intensity={Platform.OS === 'ios' ? 85 : 100}
+          tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
           style={styles.blurCapsule}
         >
-          {/* Reference Style: Liquid Dark Glass Gradient */}
+          {/* Specular Liquid Glass Gradient */}
           <LinearGradient
             colors={
               isDark
-                ? ['rgba(255, 255, 255, 0.12)', 'rgba(0, 242, 254, 0.06)', 'rgba(8, 16, 26, 0.75)']
+                ? ['rgba(255, 255, 255, 0.16)', 'rgba(255, 255, 255, 0.04)', 'transparent']
                 : ['rgba(255, 255, 255, 0.95)', 'rgba(235, 245, 255, 0.75)', 'rgba(215, 235, 255, 0.5)']
             }
             start={{ x: 0, y: 0 }}
@@ -145,12 +145,12 @@ export const HeadphoneHud: React.FC = () => {
             style={StyleSheet.absoluteFill}
           />
 
-          {/* Top Cyan Rim Light Reflection */}
+          {/* Top Specular Rim Light Reflection */}
           <LinearGradient
             colors={
               isDark
-                ? ['rgba(0, 242, 254, 0.8)', 'rgba(56, 189, 248, 0.3)', 'transparent']
-                : ['rgba(255, 255, 255, 0.95)', 'rgba(0, 180, 216, 0.3)', 'transparent']
+                ? ['rgba(255, 255, 255, 0.4)', 'rgba(255, 255, 255, 0.08)', 'transparent']
+                : ['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.3)', 'transparent']
             }
             start={{ x: 0.1, y: 0 }}
             end={{ x: 0.9, y: 0 }}
@@ -158,17 +158,17 @@ export const HeadphoneHud: React.FC = () => {
           />
 
           <View style={styles.contentRow}>
-            {/* Pulsing Icon Bubble */}
+            {/* Icon Bubble */}
             <View
               style={[
                 styles.iconBubble,
                 {
                   backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.05)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.05)',
                 },
               ]}
             >
-              <Ionicons name={iconInfo.name} size={20} color={iconInfo.color} />
+              <Ionicons name={iconInfo.name} size={20} color={isDark ? '#FFFFFF' : iconInfo.color} />
             </View>
 
             {/* Device Info */}
@@ -188,13 +188,13 @@ export const HeadphoneHud: React.FC = () => {
                   style={[
                     styles.qualityChip,
                     {
-                      backgroundColor: isDark ? 'rgba(255, 51, 92, 0.18)' : 'rgba(255, 46, 85, 0.12)',
-                      borderColor: isDark ? 'rgba(255, 51, 92, 0.35)' : 'rgba(255, 46, 85, 0.25)',
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
                     },
                   ]}
                 >
-                  <Ionicons name="sparkles" size={10} color={colors.primary} style={{ marginRight: 3 }} />
-                  <Text style={[styles.qualityText, { color: colors.primary }]}>
+                  <Ionicons name="sparkles" size={10} color={isDark ? '#FFFFFF' : colors.primary} style={{ marginRight: 3 }} />
+                  <Text style={[styles.qualityText, { color: isDark ? '#FFFFFF' : colors.primary }]}>
                     {activeHudDevice.quality}
                   </Text>
                 </View>
@@ -204,14 +204,14 @@ export const HeadphoneHud: React.FC = () => {
                     style={[
                       styles.qualityChip,
                       {
-                        backgroundColor: isDark ? 'rgba(0, 242, 254, 0.16)' : 'rgba(0, 180, 216, 0.12)',
-                        borderColor: isDark ? 'rgba(0, 242, 254, 0.35)' : 'rgba(0, 180, 216, 0.25)',
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)',
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
                         marginLeft: 6,
                       },
                     ]}
                   >
-                    <Ionicons name="globe-outline" size={10} color={isDark ? '#00F2FE' : '#00B4D8'} style={{ marginRight: 3 }} />
-                    <Text style={[styles.qualityText, { color: isDark ? '#00F2FE' : '#00B4D8' }]}>
+                    <Ionicons name="globe-outline" size={10} color={isDark ? '#FFFFFF' : colors.primary} style={{ marginRight: 3 }} />
+                    <Text style={[styles.qualityText, { color: isDark ? '#FFFFFF' : colors.primary }]}>
                       Spatial
                     </Text>
                   </View>

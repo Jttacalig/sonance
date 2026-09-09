@@ -54,14 +54,14 @@ export const SearchScreen: React.FC = () => {
           style={[
             styles.searchBarWrapper,
             {
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.85)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.85)',
               shadowColor: isDark ? '#000' : '#8CA0BA',
             },
           ]}
         >
           <BlurView
-            intensity={Platform.OS === 'ios' ? 70 : 100}
-            tint={isDark ? 'dark' : 'light'}
+            intensity={Platform.OS === 'ios' ? 85 : 100}
+            tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
             style={styles.searchBlur}
           >
             <Ionicons name="search" size={20} color={colors.textMuted} />

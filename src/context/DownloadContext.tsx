@@ -7,6 +7,10 @@ import { useLibrary } from './LibraryContext';
 interface DownloadContextType {
   downloads: DownloadItem[];
   activeCount: number;
+  activeDownload: DownloadItem | null;
+  isDownloadsModalOpen: boolean;
+  openDownloadsModal: () => void;
+  closeDownloadsModal: () => void;
   addDownload: (info: ExtractedInfo, format?: AudioFormat) => Promise<Track>;
   cancelDownload: (id: string) => void;
   removeDownload: (id: string) => void;
@@ -17,6 +21,7 @@ const DownloadContext = createContext<DownloadContextType | null>(null);
 
 export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [downloads, setDownloads] = useState<DownloadItem[]>([]);
+  const [isDownloadsModalOpen, setIsDownloadsModalOpen] = useState(false);
   const { refreshLibrary } = useLibrary();
 
   const updateDownloadItem = (id: string, updates: Partial<DownloadItem>) => {
@@ -93,15 +98,24 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setDownloads(prev => prev.filter(d => d.status !== 'completed'));
   };
 
-  const activeCount = downloads.filter(
+  const activeDownloads = downloads.filter(
     d => d.status === 'resolving' || d.status === 'downloading' || d.status === 'saving'
-  ).length;
+  );
+  const activeCount = activeDownloads.length;
+  const activeDownload = activeDownloads.length > 0 ? activeDownloads[0] : null;
+
+  const openDownloadsModal = () => setIsDownloadsModalOpen(true);
+  const closeDownloadsModal = () => setIsDownloadsModalOpen(false);
 
   return (
     <DownloadContext.Provider
       value={{
         downloads,
         activeCount,
+        activeDownload,
+        isDownloadsModalOpen,
+        openDownloadsModal,
+        closeDownloadsModal,
         addDownload,
         cancelDownload,
         removeDownload,

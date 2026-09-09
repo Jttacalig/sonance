@@ -32,7 +32,15 @@ import { SPACING, RADIUS } from '../constants/theme';
 import { QUICK_SEARCH_CHIPS, AudioFormat } from '../constants/endpoints';
 
 export const DownloaderScreen: React.FC = () => {
-  const { downloads, addDownload, cancelDownload, removeDownload, clearCompleted } = useDownloads();
+  const {
+    downloads,
+    activeCount,
+    openDownloadsModal,
+    addDownload,
+    cancelDownload,
+    removeDownload,
+    clearCompleted,
+  } = useDownloads();
   const { refreshLibrary } = useLibrary();
   const { colors, isDark } = useTheme();
 
@@ -153,21 +161,54 @@ export const DownloaderScreen: React.FC = () => {
           <View style={styles.header}>
             <View style={styles.titleWithBadge}>
               <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Add Music</Text>
-              <View
-                style={[
-                  styles.adFreeBadge,
-                  {
-                    backgroundColor: isDark
-                      ? 'rgba(0, 230, 118, 0.14)'
-                      : 'rgba(0, 200, 83, 0.1)',
-                    borderColor: isDark
-                      ? 'rgba(0, 230, 118, 0.35)'
-                      : 'rgba(0, 200, 83, 0.35)',
-                  },
-                ]}
-              >
-                <Ionicons name="shield-checkmark" size={13} color={colors.accentGreen} />
-                <Text style={[styles.adFreeText, { color: colors.accentGreen }]}>Ad-Free</Text>
+              <View style={styles.headerBadgesRight}>
+                {downloads.length > 0 && (
+                  <TouchableOpacity
+                    activeOpacity={0.75}
+                    onPress={() => openDownloadsModal()}
+                    style={[
+                      styles.downloadsHeaderBtn,
+                      {
+                        backgroundColor: isDark
+                          ? (activeCount > 0 ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.08)')
+                          : (activeCount > 0 ? colors.primary : 'rgba(0, 0, 0, 0.05)'),
+                        borderColor: isDark
+                          ? (activeCount > 0 ? 'rgba(255, 255, 255, 0.35)' : 'rgba(255, 255, 255, 0.16)')
+                          : (activeCount > 0 ? colors.primary : 'rgba(0, 0, 0, 0.1)'),
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name={activeCount > 0 ? 'arrow-down-circle' : 'cloud-download-outline'}
+                      size={13}
+                      color={activeCount > 0 ? '#FFFFFF' : colors.textSecondary}
+                    />
+                    <Text
+                      style={[
+                        styles.downloadsHeaderText,
+                        { color: activeCount > 0 ? '#FFFFFF' : colors.textSecondary },
+                      ]}
+                    >
+                      {activeCount > 0 ? `${activeCount} Active` : `${downloads.length} Queue`}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <View
+                  style={[
+                    styles.adFreeBadge,
+                    {
+                      backgroundColor: isDark
+                        ? 'rgba(0, 230, 118, 0.14)'
+                        : 'rgba(0, 200, 83, 0.1)',
+                      borderColor: isDark
+                        ? 'rgba(0, 230, 118, 0.35)'
+                        : 'rgba(0, 200, 83, 0.35)',
+                    },
+                  ]}
+                >
+                  <Ionicons name="shield-checkmark" size={13} color={colors.accentGreen} />
+                  <Text style={[styles.adFreeText, { color: colors.accentGreen }]}>Ad-Free</Text>
+                </View>
               </View>
             </View>
           </View>
@@ -178,15 +219,15 @@ export const DownloaderScreen: React.FC = () => {
               styles.searchGlassCard,
               {
                 borderColor: isDark
-                  ? 'rgba(255, 255, 255, 0.14)'
+                  ? 'rgba(255, 255, 255, 0.22)'
                   : 'rgba(255, 255, 255, 0.85)',
                 shadowColor: isDark ? '#000' : '#8CA0BA',
               },
             ]}
           >
             <BlurView
-              intensity={Platform.OS === 'ios' ? 70 : 100}
-              tint={isDark ? 'dark' : 'light'}
+              intensity={Platform.OS === 'ios' ? 85 : 100}
+              tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
               style={styles.searchBlur}
             >
               <View
@@ -194,15 +235,15 @@ export const DownloaderScreen: React.FC = () => {
                   styles.searchInputRow,
                   {
                     backgroundColor: isDark
-                      ? 'rgba(0, 0, 0, 0.25)'
+                      ? 'rgba(0, 0, 0, 0.22)'
                       : 'rgba(255, 255, 255, 0.65)',
                     borderColor: isDark
-                      ? 'rgba(255, 255, 255, 0.08)'
+                      ? 'rgba(255, 255, 255, 0.12)'
                       : 'rgba(200, 212, 228, 0.5)',
                   },
                 ]}
               >
-                <Ionicons name="search" size={20} color={colors.primary} />
+                <Ionicons name="search" size={20} color={isDark ? '#FFFFFF' : colors.primary} />
                 <TextInput
                   style={[styles.searchInput, { color: colors.textPrimary }]}
                   placeholder="Search song, artist, album, or paste URL..."
@@ -233,25 +274,25 @@ export const DownloaderScreen: React.FC = () => {
                 disabled={!searchQuery.trim() || isSearching}
                 activeOpacity={0.85}
               >
-                <LinearGradient
-                  colors={[colors.primary, '#FF007A', colors.primaryDark]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
+                <View
                   style={[
                     styles.searchSubmitBtn,
-                    { shadowColor: colors.primary },
+                    {
+                      backgroundColor: isDark ? '#FFFFFF' : colors.primary,
+                      shadowColor: isDark ? '#FFFFFF' : colors.primary,
+                    },
                     !searchQuery.trim() && styles.disabledBtn,
                   ]}
                 >
                   {isSearching ? (
-                    <ActivityIndicator size="small" color="#FFF" />
+                    <ActivityIndicator size="small" color={isDark ? '#070A10' : '#FFF'} />
                   ) : (
                     <>
-                      <Ionicons name="search" size={16} color="#FFF" />
-                      <Text style={styles.searchSubmitText}>Search Music</Text>
+                      <Ionicons name="search" size={16} color={isDark ? '#070A10' : '#FFF'} />
+                      <Text style={[styles.searchSubmitText, { color: isDark ? '#070A10' : '#FFF' }]}>Search Music</Text>
                     </>
                   )}
-                </LinearGradient>
+                </View>
               </TouchableOpacity>
             </BlurView>
           </View>
@@ -275,10 +316,10 @@ export const DownloaderScreen: React.FC = () => {
                     styles.quickChip,
                     {
                       backgroundColor: isDark
-                        ? 'rgba(255, 255, 255, 0.06)'
+                        ? 'rgba(255, 255, 255, 0.08)'
                         : 'rgba(255, 255, 255, 0.75)',
                       borderColor: isDark
-                        ? 'rgba(255, 255, 255, 0.1)'
+                        ? 'rgba(255, 255, 255, 0.16)'
                         : 'rgba(255, 255, 255, 0.9)',
                     },
                   ]}
@@ -402,16 +443,16 @@ export const DownloaderScreen: React.FC = () => {
                           styles.resultDownloadBtn,
                           {
                             backgroundColor: isDark
-                              ? 'rgba(255, 51, 92, 0.18)'
-                              : 'rgba(255, 46, 85, 0.12)',
+                              ? 'rgba(255, 255, 255, 0.12)'
+                              : 'rgba(0, 0, 0, 0.06)',
                             borderColor: isDark
-                              ? 'rgba(255, 51, 92, 0.4)'
-                              : 'rgba(255, 46, 85, 0.3)',
+                              ? 'rgba(255, 255, 255, 0.2)'
+                              : 'rgba(0, 0, 0, 0.12)',
                           },
                         ]}
                       >
-                        <Ionicons name="arrow-down" size={13} color={colors.primary} />
-                        <Text style={[styles.resultDownloadBtnText, { color: colors.primary }]}>
+                        <Ionicons name="arrow-down" size={13} color={isDark ? '#FFFFFF' : colors.primary} />
+                        <Text style={[styles.resultDownloadBtnText, { color: isDark ? '#FFFFFF' : colors.primary }]}>
                           Save
                         </Text>
                       </TouchableOpacity>
@@ -546,6 +587,25 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '900',
     letterSpacing: -0.6,
+  },
+  headerBadgesRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  downloadsHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4.5,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    gap: 5,
+  },
+  downloadsHeaderText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   adFreeBadge: {
     flexDirection: 'row',

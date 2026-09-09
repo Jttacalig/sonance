@@ -121,21 +121,21 @@ export const MetadataEditorModal: React.FC<MetadataEditorModalProps> = ({
           style={[
             styles.cardWrapper,
             {
-              backgroundColor: isDark ? 'rgba(15, 23, 42, 0.88)' : 'rgba(255, 255, 255, 0.92)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.18)' : '#FFFFFF',
+              backgroundColor: isDark ? 'rgba(10, 16, 28, 0.82)' : 'rgba(255, 255, 255, 0.92)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : '#FFFFFF',
               shadowColor: isDark ? colors.primary : '#8CA0BA',
             },
           ]}
         >
           <BlurView
-            intensity={Platform.OS === 'ios' ? 75 : 100}
-            tint={isDark ? 'dark' : 'light'}
+            intensity={Platform.OS === 'ios' ? 85 : 100}
+            tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
             style={styles.cardBlur}
           >
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.titleRow}>
-                <Ionicons name="create-outline" size={22} color={colors.primary} />
+                <Ionicons name="create-outline" size={22} color={isDark ? '#FFFFFF' : colors.primary} />
                 <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
                   Edit Song Info
                 </Text>
@@ -174,14 +174,14 @@ export const MetadataEditorModal: React.FC<MetadataEditorModalProps> = ({
                       styles.changeArtBtn,
                       {
                         backgroundColor: isDark
-                          ? 'rgba(0, 242, 254, 0.14)'
-                          : 'rgba(0, 180, 216, 0.12)',
-                        borderColor: isDark ? 'rgba(0, 242, 254, 0.35)' : 'rgba(0, 180, 216, 0.3)',
+                          ? 'rgba(255, 255, 255, 0.1)'
+                          : 'rgba(0, 0, 0, 0.06)',
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.1)',
                       },
                     ]}
                   >
-                    <Ionicons name="camera-outline" size={16} color={colors.accentCyan} />
-                    <Text style={[styles.changeArtText, { color: colors.accentCyan }]}>
+                    <Ionicons name="camera-outline" size={16} color={isDark ? '#FFFFFF' : colors.primary} />
+                    <Text style={[styles.changeArtText, { color: isDark ? '#FFFFFF' : colors.primary }]}>
                       Change Cover
                     </Text>
                   </TouchableOpacity>
@@ -294,17 +294,20 @@ export const MetadataEditorModal: React.FC<MetadataEditorModalProps> = ({
                   disabled={isSaving}
                   activeOpacity={0.85}
                 >
-                  <LinearGradient
-                    colors={[colors.primary, '#FF007A', colors.primaryDark]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.saveBtn}
+                  <View
+                    style={[
+                      styles.saveBtn,
+                      {
+                        backgroundColor: isDark ? '#FFFFFF' : colors.primary,
+                        shadowColor: isDark ? '#FFFFFF' : colors.primary,
+                      },
+                    ]}
                   >
-                    <Ionicons name="checkmark" size={18} color="#FFF" />
-                    <Text style={styles.saveBtnText}>
+                    <Ionicons name="checkmark" size={18} color={isDark ? '#070A10' : '#FFF'} />
+                    <Text style={[styles.saveBtnText, { color: isDark ? '#070A10' : '#FFF' }]}>
                       {isSaving ? 'Saving...' : 'Save Changes'}
                     </Text>
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
               </View>
             </ScrollView>

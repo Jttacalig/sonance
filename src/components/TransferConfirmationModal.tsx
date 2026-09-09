@@ -59,10 +59,10 @@ export const TransferConfirmationModal: React.FC<TransferConfirmationModalProps>
                 styles.modalCard,
                 {
                   backgroundColor: isDark
-                    ? 'rgba(18, 24, 38, 0.94)'
+                    ? 'rgba(10, 16, 28, 0.88)'
                     : 'rgba(255, 255, 255, 0.96)',
                   borderColor: isDark
-                    ? 'rgba(255, 255, 255, 0.16)'
+                    ? 'rgba(255, 255, 255, 0.22)'
                     : 'rgba(255, 255, 255, 0.9)',
                   shadowColor: isDark ? colors.primary : '#8CA0BA',
                 },
@@ -70,23 +70,26 @@ export const TransferConfirmationModal: React.FC<TransferConfirmationModalProps>
             >
               <BlurView
                 intensity={Platform.OS === 'ios' ? 85 : 100}
-                tint={isDark ? 'dark' : 'light'}
+                tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
                 style={styles.cardBlur}
               >
                 {/* Header Icon */}
                 <View style={styles.iconContainer}>
-                  <LinearGradient
-                    colors={[colors.primary, '#FF007A', '#7928CA']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.iconGradient}
+                  <View
+                    style={[
+                      styles.iconGradient,
+                      {
+                        backgroundColor: isDark ? '#FFFFFF' : colors.primary,
+                        shadowColor: '#000',
+                      },
+                    ]}
                   >
                     <Ionicons
                       name={sourceType === 'autoscan' ? 'scan' : 'folder-open'}
-                      size={32}
-                      color="#FFF"
+                      size={30}
+                      color={isDark ? '#070A10' : '#FFF'}
                     />
-                  </LinearGradient>
+                  </View>
                 </View>
 
                 {/* Title */}
@@ -107,16 +110,16 @@ export const TransferConfirmationModal: React.FC<TransferConfirmationModalProps>
                     styles.destinationBadge,
                     {
                       backgroundColor: isDark
-                        ? 'rgba(0, 229, 255, 0.12)'
-                        : 'rgba(0, 180, 216, 0.1)',
+                        ? 'rgba(255, 255, 255, 0.08)'
+                        : 'rgba(0, 0, 0, 0.05)',
                       borderColor: isDark
-                        ? 'rgba(0, 229, 255, 0.3)'
-                        : 'rgba(0, 180, 216, 0.25)',
+                        ? 'rgba(255, 255, 255, 0.16)'
+                        : 'rgba(0, 0, 0, 0.1)',
                     },
                   ]}
                 >
-                  <Ionicons name="folder" size={14} color={colors.accentCyan} />
-                  <Text style={[styles.destinationText, { color: colors.accentCyan }]}>
+                  <Ionicons name="folder" size={14} color={isDark ? '#FFFFFF' : colors.primary} />
+                  <Text style={[styles.destinationText, { color: isDark ? '#FFFFFF' : colors.primary }]}>
                     On My iPhone &gt; Sonance &gt; music
                   </Text>
                 </View>
@@ -155,7 +158,7 @@ export const TransferConfirmationModal: React.FC<TransferConfirmationModalProps>
                         <Ionicons
                           name="musical-note"
                           size={16}
-                          color={colors.primary}
+                          color={isDark ? '#FFFFFF' : colors.primary}
                           style={styles.trackRowIcon}
                         />
                         <View style={styles.trackRowInfo}>
@@ -227,23 +230,26 @@ export const TransferConfirmationModal: React.FC<TransferConfirmationModalProps>
                   disabled={isTransferring}
                   activeOpacity={0.85}
                 >
-                  <LinearGradient
-                    colors={[colors.primary, '#FF007A', colors.primaryDark]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={[styles.confirmBtn, { shadowColor: colors.primary }]}
+                  <View
+                    style={[
+                      styles.confirmBtn,
+                      {
+                        backgroundColor: isDark ? '#FFFFFF' : colors.primary,
+                        shadowColor: isDark ? '#FFFFFF' : colors.primary,
+                      },
+                    ]}
                   >
                     {isTransferring ? (
-                      <ActivityIndicator size="small" color="#FFF" />
+                      <ActivityIndicator size="small" color={isDark ? '#070A10' : '#FFF'} />
                     ) : (
                       <>
-                        <Ionicons name="arrow-down-circle" size={18} color="#FFF" />
-                        <Text style={styles.confirmBtnText}>
+                        <Ionicons name="arrow-down-circle" size={18} color={isDark ? '#070A10' : '#FFF'} />
+                        <Text style={[styles.confirmBtnText, { color: isDark ? '#070A10' : '#FFF' }]}>
                           Transfer &amp; Add ({candidates.length})
                         </Text>
                       </>
                     )}
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity

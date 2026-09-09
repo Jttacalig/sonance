@@ -1,5 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { useColorScheme as useDeviceColorScheme } from 'react-native';
+import {
+  useColorScheme as useDeviceColorScheme,
+  LayoutAnimation,
+  Platform,
+  UIManager,
+} from 'react-native';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   ThemeColors,
@@ -35,7 +44,7 @@ const ThemeContext = createContext<ThemeContextType | null>(null);
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const deviceColorScheme = useDeviceColorScheme();
   const [mode, setModeState] = useState<ThemeMode>('auto');
-  const [accentId, setAccentId] = useState<string>('cyan');
+  const [accentId, setAccentId] = useState<string>('liquid');
 
   useEffect(() => {
     AsyncStorage.getItem(THEME_STORAGE_KEY).then((saved) => {
@@ -58,21 +67,46 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const colors: ThemeColors = useMemo(() => {
     const base = isDark ? { ...DARK_COLORS } : { ...LIGHT_COLORS };
+    const primary = isDark
+      ? activeAccent.primary
+      : activeAccent.lightPrimary || activeAccent.primary;
+    const primaryLight = isDark
+      ? activeAccent.primaryLight
+      : activeAccent.lightPrimaryLight || activeAccent.primaryLight;
+    const primaryDark = isDark
+      ? activeAccent.primaryDark
+      : activeAccent.lightPrimaryDark || activeAccent.primaryDark;
+    const glowColor = isDark
+      ? activeAccent.glowColor
+      : activeAccent.lightGlowColor || activeAccent.glowColor;
+
     return {
       ...base,
-      primary: activeAccent.primary,
-      primaryLight: activeAccent.primaryLight,
-      primaryDark: activeAccent.primaryDark,
-      accentCyan: activeAccent.glowColor,
+      primary,
+      primaryLight,
+      primaryDark,
+      accentCyan: glowColor,
     };
   }, [isDark, activeAccent]);
 
   const setMode = async (newMode: ThemeMode) => {
+    LayoutAnimation.configureNext({
+      duration: 650,
+      create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+      update: { type: LayoutAnimation.Types.easeInEaseOut },
+      delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+    });
     setModeState(newMode);
     await AsyncStorage.setItem(THEME_STORAGE_KEY, newMode);
   };
 
   const setAccent = async (newAccentId: string) => {
+    LayoutAnimation.configureNext({
+      duration: 450,
+      create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+      update: { type: LayoutAnimation.Types.easeInEaseOut },
+      delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+    });
     setAccentId(newAccentId);
     await AsyncStorage.setItem(ACCENT_STORAGE_KEY, newAccentId);
   };

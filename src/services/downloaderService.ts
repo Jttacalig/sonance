@@ -199,7 +199,8 @@ class DownloaderService {
    */
   async resolveAudioStreamUrl(
     url: string,
-    preferredFormat: AudioFormat = 'm4a'
+    preferredFormat: AudioFormat = 'm4a',
+    onProgress?: (progress: number, message?: string) => void
   ): Promise<{ streamUrl: string; filename?: string; finalExtension: string }> {
     const sourceType = this.detectSourceType(url);
     if (sourceType === 'direct') {
@@ -215,6 +216,7 @@ class DownloaderService {
       : 'm4a';
 
     const finalExtension = formatParam;
+    onProgress?.(0.08, 'Connecting to audio converter...');
 
     // 1. Primary: High-Speed Audio Stream Resolver (supports m4a, mp3, flac, wav)
     try {
@@ -229,11 +231,14 @@ class DownloaderService {
       if (initRes.ok) {
         const initData = await initRes.json();
         if (initData.download_url && typeof initData.download_url === 'string' && initData.download_url.trim().length > 0) {
+          onProgress?.(0.35, 'Stream ready, starting download...');
           return { streamUrl: initData.download_url.trim(), filename: initData.title, finalExtension };
         }
         if (initData.progress_url) {
           // Poll progress for audio conversion
-          for (let attempt = 0; attempt < 15; attempt++) {
+          for (let attempt = 0; attempt < 20; attempt++) {
+            const stepPct = 0.08 + Math.min(0.25, ((attempt + 1) / 20) * 0.25);
+            onProgress?.(stepPct, 'Converting audio to high-quality format...');
             await new Promise(r => setTimeout(r, 1000));
             try {
               const pollRes = await this.fetchWithTimeout(initData.progress_url, {
@@ -245,6 +250,7 @@ class DownloaderService {
               if (pollRes.ok) {
                 const pollData = await pollRes.json();
                 if (pollData.download_url && typeof pollData.download_url === 'string' && pollData.download_url.trim().length > 0) {
+                  onProgress?.(0.35, 'Conversion complete, starting download...');
                   return {
                     streamUrl: pollData.download_url.trim(),
                     filename: pollData.title || initData.title,
@@ -263,6 +269,7 @@ class DownloaderService {
     }
 
     // 2. Secondary: Cobalt instances fallback
+    onProgress?.(0.20, 'Trying backup stream resolver...');
     const settings = await storageService.getSettings();
     const instancesToTry = [
       settings.cobaltApiUrl,
@@ -289,11 +296,13 @@ class DownloaderService {
         if (response.ok) {
           const data = await response.json();
           if (data.url) {
+            onProgress?.(0.35, 'Stream ready, starting download...');
             return { streamUrl: data.url, filename: data.filename, finalExtension: formatParam };
           }
           if (data.status === 'picker' && Array.isArray(data.picker) && data.picker.length > 0) {
             const firstItem = data.picker[0];
             if (firstItem.url) {
+              onProgress?.(0.35, 'Stream ready, starting download...');
               return { streamUrl: firstItem.url, filename: firstItem.filename, finalExtension: formatParam };
             }
           }
@@ -321,7 +330,15 @@ class DownloaderService {
       logger.download(`Initiating download for: "${downloadItem.title}" (${preferredFormat.toUpperCase()})`);
       // 1. Resolve stream
       onStatusChange('resolving', `Extracting ${preferredFormat.toUpperCase()} stream...`);
-      const { streamUrl, finalExtension } = await this.resolveAudioStreamUrl(downloadItem.url, preferredFormat);
+      onProgress(0.05, 0, 0);
+      const { streamUrl, finalExtension } = await this.resolveAudioStreamUrl(
+        downloadItem.url,
+        preferredFormat,
+        (pct, msg) => {
+          onProgress(pct, 0, 0);
+          if (msg) onStatusChange('resolving', msg);
+        }
+      );
       logger.download(`Stream resolved successfully for "${downloadItem.title}"`);
 
       // 2. Prepare URL-safe file destination (no spaces or non-URL chars in file name)
@@ -336,21 +353,38 @@ class DownloaderService {
       const fileExt = finalExtension || 'm4a';
       const destinationFile = `${MUSIC_DIR}${trackId}_${safeSlug}.${fileExt}`;
 
-      // 3. Download audio file
+      // 3. Download audio file with live byte & percentage tracking
       onStatusChange('downloading', `Downloading high-fidelity ${fileExt.toUpperCase()} audio...`);
-      
+      onProgress(0.35, 0, 0);
+
+      const estimatedTotalBytes = (downloadItem.duration && downloadItem.duration > 0)
+        ? Math.round(downloadItem.duration * 40000) // ~40KB/sec for 320kbps AAC audio
+        : 5.5 * 1024 * 1024; // 5.5MB default
+
+      let lastBytesWritten = 0;
+      let lastExpectedBytes = estimatedTotalBytes;
+
       const downloadResumable = FileSystem.createDownloadResumable(
         streamUrl,
         destinationFile,
         {},
         (downloadProgress) => {
-          const progress = downloadProgress.totalBytesExpectedToWrite > 0
-            ? downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite
+          lastBytesWritten = downloadProgress.totalBytesWritten;
+          lastExpectedBytes = downloadProgress.totalBytesExpectedToWrite > 0
+            ? downloadProgress.totalBytesExpectedToWrite
+            : Math.max(estimatedTotalBytes, lastBytesWritten * 1.15);
+
+          const fileRatio = lastExpectedBytes > 0
+            ? Math.min(1.0, lastBytesWritten / lastExpectedBytes)
             : 0;
+
+          // Scale download phase from 35% to 92%
+          const totalProgress = Math.min(0.92, 0.35 + fileRatio * 0.57);
+
           onProgress(
-            progress,
-            downloadProgress.totalBytesWritten,
-            downloadProgress.totalBytesExpectedToWrite
+            totalProgress,
+            lastBytesWritten,
+            lastExpectedBytes
           );
         }
       );
@@ -364,6 +398,7 @@ class DownloaderService {
       }
 
       onStatusChange('saving', 'Processing offline artwork & metadata...');
+      onProgress(0.95, lastBytesWritten || estimatedTotalBytes, lastExpectedBytes || estimatedTotalBytes);
 
       // 4. Download and save artwork locally if available
       let localArtworkUri: string | undefined;
@@ -382,7 +417,7 @@ class DownloaderService {
 
       // 5. Measure file size
       let duration = downloadItem.duration || 180;
-      let fileSize = 0;
+      let fileSize = lastBytesWritten || 0;
 
       try {
         const fileInfo = await FileSystem.getInfoAsync(result.uri);
@@ -413,6 +448,7 @@ class DownloaderService {
       await storageService.saveTrack(track);
       const mbStr = track.fileSize ? (track.fileSize / 1024 / 1024).toFixed(1) : '0';
       logger.download(`Download complete: "${track.title}" by ${track.artist} (${mbStr} MB)`);
+      onProgress(1.0, fileSize, fileSize);
       onStatusChange('completed', 'Saved to offline library!');
 
       return track;

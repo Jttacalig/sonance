@@ -138,7 +138,7 @@ export const PlayerBackgroundModal: React.FC<PlayerBackgroundModalProps> = ({
           />
           <BlurView
             intensity={Platform.OS === 'ios' ? draftTheme.blurIntensity : 80}
-            tint={isDark ? 'dark' : 'light'}
+            tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
             style={StyleSheet.absoluteFill}
           />
           <View
@@ -171,7 +171,7 @@ export const PlayerBackgroundModal: React.FC<PlayerBackgroundModalProps> = ({
           />
           <BlurView
             intensity={Platform.OS === 'ios' ? draftTheme.blurIntensity : 80}
-            tint={isDark ? 'dark' : 'light'}
+            tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
             style={StyleSheet.absoluteFill}
           />
           <View
@@ -190,8 +190,8 @@ export const PlayerBackgroundModal: React.FC<PlayerBackgroundModalProps> = ({
         <LinearGradient
           colors={
             isDark
-              ? ['#FF007A', '#7928CA', '#00F2FE']
-              : ['#FF2E55', '#00B4D8', '#8338EC']
+              ? ['#161B26', '#0E131E', '#070A10']
+              : ['#F0F4F8', '#E2E8F0', '#CBD5E1']
           }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -199,7 +199,7 @@ export const PlayerBackgroundModal: React.FC<PlayerBackgroundModalProps> = ({
         />
         <BlurView
           intensity={Platform.OS === 'ios' ? draftTheme.blurIntensity : 80}
-          tint={isDark ? 'dark' : 'light'}
+          tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
           style={StyleSheet.absoluteFill}
         />
         <View
@@ -267,19 +267,23 @@ export const PlayerBackgroundModal: React.FC<PlayerBackgroundModalProps> = ({
                   disabled={isSaving}
                   activeOpacity={0.8}
                 >
-                  <LinearGradient
-                    colors={[colors.primary, '#FF007A']}
-                    style={styles.headerSaveBtn}
+                  <View
+                    style={[
+                      styles.headerSaveBtn,
+                      {
+                        backgroundColor: isDark ? '#FFFFFF' : colors.primary,
+                      },
+                    ]}
                   >
                     {isSaving ? (
-                      <ActivityIndicator size="small" color="#FFF" />
+                      <ActivityIndicator size="small" color={isDark ? '#070A10' : '#FFF'} />
                     ) : (
                       <>
-                        <Ionicons name="checkmark" size={14} color="#FFF" />
-                        <Text style={styles.headerSaveBtnText}>Save</Text>
+                        <Ionicons name="checkmark" size={14} color={isDark ? '#070A10' : '#FFF'} />
+                        <Text style={[styles.headerSaveBtnText, { color: isDark ? '#070A10' : '#FFF' }]}>Save</Text>
                       </>
                     )}
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
               )}
 
@@ -315,9 +319,9 @@ export const PlayerBackgroundModal: React.FC<PlayerBackgroundModalProps> = ({
                 styles.previewCard,
                 {
                   borderColor: isModified
-                    ? colors.primary
+                    ? (isDark ? '#FFFFFF' : colors.primary)
                     : isDark
-                    ? 'rgba(255, 255, 255, 0.15)'
+                    ? 'rgba(255, 255, 255, 0.22)'
                     : 'rgba(255, 255, 255, 0.9)',
                   shadowColor: isModified ? colors.primary : '#000',
                 },
@@ -333,21 +337,21 @@ export const PlayerBackgroundModal: React.FC<PlayerBackgroundModalProps> = ({
                       styles.previewStatusBadge,
                       {
                         backgroundColor: isModified
-                          ? 'rgba(255, 145, 0, 0.35)'
-                          : 'rgba(0, 242, 96, 0.25)',
-                        borderColor: isModified ? '#FF9100' : '#00F260',
+                          ? 'rgba(255, 255, 255, 0.2)'
+                          : 'rgba(255, 255, 255, 0.15)',
+                        borderColor: isModified ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.3)',
                       },
                     ]}
                   >
                     <Ionicons
                       name={isModified ? 'eye-outline' : 'checkmark-circle'}
                       size={11}
-                      color={isModified ? '#FFB74D' : '#00F260'}
+                      color="#FFFFFF"
                     />
                     <Text
                       style={[
                         styles.previewStatusText,
-                        { color: isModified ? '#FFE0B2' : '#E8F5E9' },
+                        { color: '#FFFFFF' },
                       ]}
                     >
                       {isModified ? 'Preview Mode' : 'Active Theme'}
@@ -357,12 +361,14 @@ export const PlayerBackgroundModal: React.FC<PlayerBackgroundModalProps> = ({
 
                 {/* Mini Player Mockup UI */}
                 <View style={styles.mockPlayerBody}>
-                  <LinearGradient
-                    colors={['#FF007A', '#7928CA']}
-                    style={styles.mockAlbumArt}
+                  <View
+                    style={[
+                      styles.mockAlbumArt,
+                      { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.18)' : '#E2E8F0' },
+                    ]}
                   >
-                    <Ionicons name="musical-note" size={16} color="#FFF" />
-                  </LinearGradient>
+                    <Ionicons name="musical-note" size={16} color={isDark ? '#FFFFFF' : colors.primary} />
+                  </View>
 
                   <View style={styles.mockTrackInfo}>
                     <Text style={styles.mockTrackTitle} numberOfLines={1}>
@@ -586,10 +592,10 @@ export const PlayerBackgroundModal: React.FC<PlayerBackgroundModalProps> = ({
                   activeOpacity={0.85}
                 >
                   <LinearGradient
-                    colors={['#FF007A', '#7928CA', '#00F2FE']}
+                    colors={isDark ? ['rgba(255, 255, 255, 0.25)', 'rgba(255, 255, 255, 0.08)'] : ['#0F172A', '#334155']}
                     style={styles.auraIconCircle}
                   >
-                    <Ionicons name="sparkles" size={24} color="#FFF" />
+                    <Ionicons name="sparkles" size={24} color={isDark ? '#FFFFFF' : '#FFFFFF'} />
                   </LinearGradient>
                   <View style={{ flex: 1, gap: 3 }}>
                     <View style={styles.auraTitleRow}>
@@ -643,13 +649,15 @@ export const PlayerBackgroundModal: React.FC<PlayerBackgroundModalProps> = ({
                           onPress={handlePickCustomPhoto}
                           activeOpacity={0.8}
                         >
-                          <LinearGradient
-                            colors={[colors.primary, '#FF007A']}
-                            style={styles.changePhotoBtn}
+                          <View
+                            style={[
+                              styles.changePhotoBtn,
+                              { backgroundColor: isDark ? '#FFFFFF' : colors.primary },
+                            ]}
                           >
-                            <Ionicons name="camera-reverse" size={13} color="#FFF" />
-                            <Text style={styles.changePhotoBtnText}>Change Photo</Text>
-                          </LinearGradient>
+                            <Ionicons name="camera-reverse" size={13} color={isDark ? '#070A10' : '#FFF'} />
+                            <Text style={[styles.changePhotoBtnText, { color: isDark ? '#070A10' : '#FFF' }]}>Change Photo</Text>
+                          </View>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -659,13 +667,15 @@ export const PlayerBackgroundModal: React.FC<PlayerBackgroundModalProps> = ({
                       onPress={handlePickCustomPhoto}
                       activeOpacity={0.85}
                     >
-                      <LinearGradient
-                        colors={[colors.primary, '#FF007A', colors.primaryDark]}
-                        style={styles.uploadBtn}
+                      <View
+                        style={[
+                          styles.uploadBtn,
+                          { backgroundColor: isDark ? '#FFFFFF' : colors.primary },
+                        ]}
                       >
-                        <Ionicons name="add-circle-outline" size={18} color="#FFF" />
-                        <Text style={styles.uploadBtnText}>Choose Photo from Files</Text>
-                      </LinearGradient>
+                        <Ionicons name="add-circle-outline" size={18} color={isDark ? '#070A10' : '#FFF'} />
+                        <Text style={[styles.uploadBtnText, { color: isDark ? '#070A10' : '#FFF' }]}>Choose Photo from Files</Text>
+                      </View>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -767,7 +777,7 @@ export const PlayerBackgroundModal: React.FC<PlayerBackgroundModalProps> = ({
                 styles.floatingBottomDock,
                 {
                   borderColor: isDark
-                    ? 'rgba(255, 255, 255, 0.18)'
+                    ? 'rgba(255, 255, 255, 0.22)'
                     : 'rgba(255, 255, 255, 0.9)',
                   shadowColor: isDark ? '#000' : '#8CA0BA',
                 },
@@ -775,7 +785,7 @@ export const PlayerBackgroundModal: React.FC<PlayerBackgroundModalProps> = ({
             >
               <BlurView
                 intensity={Platform.OS === 'ios' ? 85 : 100}
-                tint={isDark ? 'dark' : 'light'}
+                tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
                 style={styles.dockBlur}
               >
                 {/* Revert Button */}
@@ -808,31 +818,27 @@ export const PlayerBackgroundModal: React.FC<PlayerBackgroundModalProps> = ({
                   disabled={isSaving}
                   activeOpacity={0.85}
                 >
-                  <LinearGradient
-                    colors={
-                      isSavedSuccess
-                        ? ['#00F260', '#0575E6']
-                        : [colors.primary, '#FF007A', colors.primaryDark]
-                    }
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.saveBtn}
+                  <View
+                    style={[
+                      styles.saveBtn,
+                      { backgroundColor: isDark ? '#FFFFFF' : colors.primary },
+                    ]}
                   >
                     {isSaving ? (
-                      <ActivityIndicator size="small" color="#FFF" />
+                      <ActivityIndicator size="small" color={isDark ? '#070A10' : '#FFF'} />
                     ) : (
                       <>
                         <Ionicons
                           name={isSavedSuccess ? 'checkmark-circle' : 'checkmark-done'}
                           size={16}
-                          color="#FFF"
+                          color={isDark ? '#070A10' : '#FFF'}
                         />
-                        <Text style={styles.saveBtnText}>
+                        <Text style={[styles.saveBtnText, { color: isDark ? '#070A10' : '#FFF' }]}>
                           {isSavedSuccess ? 'Saved!' : 'Save & Apply'}
                         </Text>
                       </>
                     )}
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
               </BlurView>
             </View>

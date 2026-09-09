@@ -41,9 +41,25 @@ export interface AccentTheme {
   primaryLight: string;
   primaryDark: string;
   glowColor: string;
+  lightPrimary?: string;
+  lightPrimaryLight?: string;
+  lightPrimaryDark?: string;
+  lightGlowColor?: string;
 }
 
 export const ACCENT_THEMES: AccentTheme[] = [
+  {
+    id: 'liquid',
+    name: 'Liquid Glass',
+    primary: '#FFFFFF',
+    primaryLight: '#FFFFFF',
+    primaryDark: '#D4D4D8',
+    glowColor: 'rgba(255, 255, 255, 0.6)',
+    lightPrimary: '#0F172A',
+    lightPrimaryLight: '#334155',
+    lightPrimaryDark: '#020617',
+    lightGlowColor: 'rgba(15, 23, 42, 0.35)',
+  },
   {
     id: 'cyan',
     name: 'Cyber Cyan',
@@ -51,6 +67,10 @@ export const ACCENT_THEMES: AccentTheme[] = [
     primaryLight: '#38BDF8',
     primaryDark: '#0284C7',
     glowColor: '#00F2FE',
+    lightPrimary: '#0284C7',
+    lightPrimaryLight: '#0EA5E9',
+    lightPrimaryDark: '#0369A1',
+    lightGlowColor: 'rgba(2, 132, 199, 0.35)',
   },
   {
     id: 'rose',
@@ -59,6 +79,10 @@ export const ACCENT_THEMES: AccentTheme[] = [
     primaryLight: '#FF6685',
     primaryDark: '#D4183E',
     glowColor: '#FF335C',
+    lightPrimary: '#E11D48',
+    lightPrimaryLight: '#F43F5E',
+    lightPrimaryDark: '#BE123C',
+    lightGlowColor: 'rgba(225, 29, 72, 0.35)',
   },
   {
     id: 'violet',
@@ -67,6 +91,10 @@ export const ACCENT_THEMES: AccentTheme[] = [
     primaryLight: '#C084FC',
     primaryDark: '#7E22CE',
     glowColor: '#A855F7',
+    lightPrimary: '#7C3AED',
+    lightPrimaryLight: '#8B5CF6',
+    lightPrimaryDark: '#6D28D9',
+    lightGlowColor: 'rgba(124, 58, 237, 0.35)',
   },
   {
     id: 'emerald',
@@ -75,6 +103,10 @@ export const ACCENT_THEMES: AccentTheme[] = [
     primaryLight: '#34D399',
     primaryDark: '#059669',
     glowColor: '#10B981',
+    lightPrimary: '#059669',
+    lightPrimaryLight: '#10B981',
+    lightPrimaryDark: '#047857',
+    lightGlowColor: 'rgba(5, 150, 105, 0.35)',
   },
   {
     id: 'gold',
@@ -83,59 +115,63 @@ export const ACCENT_THEMES: AccentTheme[] = [
     primaryLight: '#FBBF24',
     primaryDark: '#D97706',
     glowColor: '#F59E0B',
+    lightPrimary: '#D97706',
+    lightPrimaryLight: '#F59E0B',
+    lightPrimaryDark: '#B45309',
+    lightGlowColor: 'rgba(217, 119, 6, 0.35)',
   },
 ];
 
 export const LIGHT_COLORS: ThemeColors = {
-  background: '#EAF0F8',
-  backgroundSecondary: '#F2F6FC',
-  backgroundTertiary: '#E1E8F2',
-  surface: '#F4F7FC',
+  background: '#EEF3F9',
+  backgroundSecondary: '#F5F8FC',
+  backgroundTertiary: '#E2EAF4',
+  surface: '#FFFFFF',
   surfaceElevated: '#FFFFFF',
-  surfaceInset: '#DFE6F1',
-  card: '#F6F9FD',
+  surfaceInset: '#E2E8F0',
+  card: 'rgba(255, 255, 255, 0.88)',
   
-  primary: '#FF2E55',
-  primaryLight: '#FF5C7A',
-  primaryDark: '#D4183E',
-  secondary: '#7928CA',
-  accentCyan: '#00B4D8',
-  accentGreen: '#00C853',
-  accentOrange: '#FF6D00',
+  primary: '#0F172A',
+  primaryLight: '#334155',
+  primaryDark: '#020617',
+  secondary: '#334155',
+  accentCyan: '#0284C7',
+  accentGreen: '#059669',
+  accentOrange: '#D97706',
   
-  textPrimary: '#151C2C',
-  textSecondary: '#54657E',
-  textMuted: '#8A99AD',
-  textDim: '#A8B6C7',
+  textPrimary: '#0F172A',
+  textSecondary: '#334155',
+  textMuted: '#64748B',
+  textDim: '#94A3B8',
   
-  border: 'rgba(255, 255, 255, 0.9)',
-  borderLight: 'rgba(200, 212, 228, 0.6)',
-  borderHighlight: '#FFFFFF',
-  divider: '#DDE5F0',
-  glassOverlay: 'rgba(240, 245, 252, 0.85)',
-  glassBorder: 'rgba(255, 255, 255, 0.8)',
-  modalOverlay: 'rgba(15, 23, 42, 0.55)',
+  border: 'rgba(15, 23, 42, 0.08)',
+  borderLight: 'rgba(15, 23, 42, 0.05)',
+  borderHighlight: 'rgba(255, 255, 255, 0.95)',
+  divider: 'rgba(15, 23, 42, 0.07)',
+  glassOverlay: 'rgba(255, 255, 255, 0.82)',
+  glassBorder: 'rgba(15, 23, 42, 0.08)',
+  modalOverlay: 'rgba(15, 23, 42, 0.60)',
   
-  success: '#10B981',
-  error: '#EF4444',
-  warning: '#F59E0B',
-  info: '#3B82F6',
+  success: '#059669',
+  error: '#DC2626',
+  warning: '#D97706',
+  info: '#2563EB',
 };
 
 export const DARK_COLORS: ThemeColors = {
-  background: '#0B0F17',
-  backgroundSecondary: '#111722',
-  backgroundTertiary: '#17202F',
-  surface: '#141C2B',
-  surfaceElevated: '#1C273C',
-  surfaceInset: '#0E141F',
-  card: '#161F30',
+  background: '#06080F',
+  backgroundSecondary: '#0C101C',
+  backgroundTertiary: '#121828',
+  surface: '#101624',
+  surfaceElevated: '#161E30',
+  surfaceInset: '#080C14',
+  card: 'rgba(255, 255, 255, 0.06)',
   
-  primary: '#FF335C',
-  primaryLight: '#FF5C7E',
-  primaryDark: '#D91E44',
-  secondary: '#8B5CF6',
-  accentCyan: '#00F2FE',
+  primary: '#FFFFFF',
+  primaryLight: '#FFFFFF',
+  primaryDark: '#D4D4D8',
+  secondary: '#E2E8F0',
+  accentCyan: '#FFFFFF',
   accentGreen: '#00E676',
   accentOrange: '#FF9100',
   
@@ -144,13 +180,13 @@ export const DARK_COLORS: ThemeColors = {
   textMuted: '#64748B',
   textDim: '#475569',
   
-  border: 'rgba(255, 255, 255, 0.08)',
-  borderLight: 'rgba(255, 255, 255, 0.04)',
-  borderHighlight: 'rgba(255, 255, 255, 0.15)',
-  divider: '#1E293B',
-  glassOverlay: 'rgba(15, 23, 36, 0.85)',
-  glassBorder: 'rgba(255, 255, 255, 0.12)',
-  modalOverlay: 'rgba(0, 0, 0, 0.85)',
+  border: 'rgba(255, 255, 255, 0.20)',
+  borderLight: 'rgba(255, 255, 255, 0.10)',
+  borderHighlight: 'rgba(255, 255, 255, 0.45)',
+  divider: 'rgba(255, 255, 255, 0.10)',
+  glassOverlay: 'rgba(255, 255, 255, 0.10)',
+  glassBorder: 'rgba(255, 255, 255, 0.28)',
+  modalOverlay: 'rgba(0, 0, 0, 0.70)',
   
   success: '#10B981',
   error: '#EF4444',
@@ -181,72 +217,72 @@ export const RADIUS = {
 };
 
 export const getClayCardStyle = (isDark: boolean, colors: ThemeColors) => ({
-  backgroundColor: colors.surface,
+  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : colors.surface,
   borderRadius: RADIUS.clay,
-  borderWidth: 1.5,
-  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.85)',
-  shadowColor: isDark ? '#000' : '#8CA0BA',
-  shadowOffset: { width: 0, height: isDark ? 6 : 8 },
-  shadowOpacity: isDark ? 0.45 : 0.28,
-  shadowRadius: isDark ? 10 : 12,
+  borderWidth: 1.2,
+  borderColor: isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.85)',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 6 },
+  shadowOpacity: isDark ? 0.35 : 0.18,
+  shadowRadius: 14,
   elevation: 6,
 });
 
 export const getNeumorphicButton = (isDark: boolean, colors: ThemeColors, isPrimary = false) => ({
-  backgroundColor: isPrimary ? colors.primary : colors.surfaceElevated,
+  backgroundColor: isPrimary ? (isDark ? '#FFFFFF' : '#0F172A') : isDark ? 'rgba(255, 255, 255, 0.1)' : colors.surfaceElevated,
   borderRadius: RADIUS.full,
-  borderWidth: 1.5,
+  borderWidth: 1.2,
   borderColor: isPrimary
-    ? 'rgba(255, 255, 255, 0.35)'
+    ? 'rgba(255, 255, 255, 0.5)'
     : isDark
-    ? 'rgba(255, 255, 255, 0.1)'
+    ? 'rgba(255, 255, 255, 0.2)'
     : '#FFFFFF',
-  shadowColor: isPrimary ? colors.primary : isDark ? '#000' : '#94A6C0',
+  shadowColor: isPrimary ? '#000' : '#000',
   shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: isPrimary ? 0.45 : isDark ? 0.35 : 0.25,
+  shadowOpacity: isPrimary ? 0.35 : isDark ? 0.25 : 0.18,
   shadowRadius: 8,
-  elevation: 5,
+  elevation: 4,
 });
 
 export const getInsetInputStyle = (isDark: boolean, colors: ThemeColors) => ({
-  backgroundColor: colors.surfaceInset,
+  backgroundColor: isDark ? 'rgba(0, 0, 0, 0.25)' : colors.surfaceInset,
   borderRadius: RADIUS.lg,
   borderWidth: 1.2,
-  borderColor: isDark ? 'rgba(0, 0, 0, 0.6)' : 'rgba(180, 195, 215, 0.4)',
+  borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(180, 195, 215, 0.4)',
 });
 
 export const getLiquidGlassCardStyle = (isDark: boolean, colors: ThemeColors, glowColor?: string) => ({
-  backgroundColor: isDark ? 'rgba(10, 18, 28, 0.45)' : 'rgba(255, 255, 255, 0.65)',
+  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.75)',
   borderRadius: RADIUS.clay,
   borderWidth: 1.2,
-  borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.95)',
-  shadowColor: glowColor || (isDark ? '#00F2FE' : '#8CA0BA'),
-  shadowOffset: { width: 0, height: isDark ? 6 : 8 },
-  shadowOpacity: isDark ? 0.35 : 0.22,
-  shadowRadius: isDark ? 16 : 12,
-  elevation: 7,
+  borderColor: isDark ? 'rgba(255, 255, 255, 0.24)' : 'rgba(255, 255, 255, 0.95)',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 6 },
+  shadowOpacity: isDark ? 0.35 : 0.18,
+  shadowRadius: 16,
+  elevation: 6,
 });
 
 export const getLiquidGlassPillStyle = (isDark: boolean, colors: ThemeColors, isHighlighted = false) => ({
   backgroundColor: isHighlighted
     ? isDark
-      ? 'rgba(0, 242, 254, 0.16)'
-      : 'rgba(0, 180, 216, 0.12)'
+      ? 'rgba(255, 255, 255, 0.22)'
+      : 'rgba(255, 255, 255, 0.9)'
     : isDark
-    ? 'rgba(255, 255, 255, 0.1)'
-    : 'rgba(255, 255, 255, 0.8)',
+    ? 'rgba(255, 255, 255, 0.09)'
+    : 'rgba(255, 255, 255, 0.75)',
   borderRadius: RADIUS.full,
   borderWidth: 1.2,
   borderColor: isHighlighted
     ? isDark
-      ? 'rgba(0, 242, 254, 0.45)'
-      : 'rgba(0, 180, 216, 0.35)'
+      ? 'rgba(255, 255, 255, 0.40)'
+      : 'rgba(0, 0, 0, 0.12)'
     : isDark
-    ? 'rgba(255, 255, 255, 0.2)'
+    ? 'rgba(255, 255, 255, 0.22)'
     : 'rgba(255, 255, 255, 0.95)',
-  shadowColor: isHighlighted ? (isDark ? '#00F2FE' : '#00B4D8') : (isDark ? '#000' : '#8CA0BA'),
+  shadowColor: '#000',
   shadowOffset: { width: 0, height: 3 },
-  shadowOpacity: isHighlighted ? 0.4 : 0.2,
+  shadowOpacity: isHighlighted ? 0.3 : 0.15,
   shadowRadius: 6,
   elevation: 3,
 });
