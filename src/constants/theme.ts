@@ -163,6 +163,42 @@ export const getInsetInputStyle = (isDark: boolean, colors: ThemeColors) => ({
   borderColor: isDark ? 'rgba(0, 0, 0, 0.6)' : 'rgba(180, 195, 215, 0.4)',
 });
 
+export const getLiquidGlassCardStyle = (isDark: boolean, colors: ThemeColors, glowColor?: string) => ({
+  backgroundColor: isDark ? 'rgba(10, 18, 28, 0.45)' : 'rgba(255, 255, 255, 0.65)',
+  borderRadius: RADIUS.clay,
+  borderWidth: 1.2,
+  borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.95)',
+  shadowColor: glowColor || (isDark ? '#00F2FE' : '#8CA0BA'),
+  shadowOffset: { width: 0, height: isDark ? 6 : 8 },
+  shadowOpacity: isDark ? 0.35 : 0.22,
+  shadowRadius: isDark ? 16 : 12,
+  elevation: 7,
+});
+
+export const getLiquidGlassPillStyle = (isDark: boolean, colors: ThemeColors, isHighlighted = false) => ({
+  backgroundColor: isHighlighted
+    ? isDark
+      ? 'rgba(0, 242, 254, 0.16)'
+      : 'rgba(0, 180, 216, 0.12)'
+    : isDark
+    ? 'rgba(255, 255, 255, 0.1)'
+    : 'rgba(255, 255, 255, 0.8)',
+  borderRadius: RADIUS.full,
+  borderWidth: 1.2,
+  borderColor: isHighlighted
+    ? isDark
+      ? 'rgba(0, 242, 254, 0.45)'
+      : 'rgba(0, 180, 216, 0.35)'
+    : isDark
+    ? 'rgba(255, 255, 255, 0.2)'
+    : 'rgba(255, 255, 255, 0.95)',
+  shadowColor: isHighlighted ? (isDark ? '#00F2FE' : '#00B4D8') : (isDark ? '#000' : '#8CA0BA'),
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: isHighlighted ? 0.4 : 0.2,
+  shadowRadius: 6,
+  elevation: 3,
+});
+
 export const SHADOWS = {
   small: {
     shadowColor: '#000',

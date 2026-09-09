@@ -16,6 +16,7 @@ import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
 import { useTheme, ThemeMode } from '../context/ThemeContext';
 import { useCustomization } from '../context/CustomizationContext';
+import { useAudioRoute } from '../context/AudioRouteContext';
 import { storageService } from '../services/storageService';
 import { SleepTimerModal } from '../components/SleepTimerModal';
 import { EqualizerModal } from '../components/EqualizerModal';
@@ -38,6 +39,7 @@ export const SettingsScreen: React.FC = () => {
   const { sleepTimerMinutes } = usePlayer();
   const { colors, isDark, mode, setMode } = useTheme();
   const { activePreset, playerTheme } = useCustomization();
+  const { currentDevice, triggerHud } = useAudioRoute();
 
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [showSleepModal, setShowSleepModal] = useState(false);
@@ -280,6 +282,136 @@ export const SettingsScreen: React.FC = () => {
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
               </TouchableOpacity>
+            </BlurView>
+          </View>
+
+          {/* iOS 26 Audio Output & Headphone HUD Simulator Card */}
+          <View
+            style={[
+              styles.glassCard,
+              {
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(255, 255, 255, 0.9)',
+                shadowColor: isDark ? '#000' : '#8CA0BA',
+              },
+            ]}
+          >
+            <BlurView
+              intensity={Platform.OS === 'ios' ? 75 : 100}
+              tint={isDark ? 'dark' : 'light'}
+              style={styles.cardBlur}
+            >
+              <View style={styles.cardHeader}>
+                <Ionicons name="headset-outline" size={20} color={colors.accentCyan} />
+                <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
+                  Audio Output & Headphone HUD
+                </Text>
+              </View>
+
+              <Text style={[styles.sectionSubtitle, { color: colors.textSecondary, marginBottom: 12 }]}>
+                Current Route: <Text style={{ color: colors.primary, fontWeight: '700' }}>{currentDevice.name}</Text> ({currentDevice.quality})
+              </Text>
+
+              <Text style={[styles.subLabel, { color: colors.textMuted, marginBottom: 8 }]}>
+                TEST DYNAMIC ISLAND HUD PREVIEWS:
+              </Text>
+
+              <View style={styles.deviceTestGrid}>
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  style={[
+                    styles.deviceTestBtn,
+                    {
+                      backgroundColor: isDark ? 'rgba(0, 242, 254, 0.12)' : 'rgba(0, 180, 216, 0.1)',
+                      borderColor: isDark ? 'rgba(0, 242, 254, 0.3)' : 'rgba(0, 180, 216, 0.25)',
+                    },
+                  ]}
+                  onPress={() =>
+                    triggerHud({
+                      name: "Jhet's AirPods Pro",
+                      type: 'airpods',
+                      quality: 'Lossless • 24-bit / 48 kHz',
+                      isSpatialAudioAvailable: true,
+                    })
+                  }
+                >
+                  <Ionicons name="headset" size={16} color={isDark ? '#00F2FE' : '#00B4D8'} />
+                  <Text style={[styles.deviceTestText, { color: isDark ? '#00F2FE' : '#00B4D8' }]}>
+                    AirPods Pro
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  style={[
+                    styles.deviceTestBtn,
+                    {
+                      backgroundColor: isDark ? 'rgba(255, 51, 92, 0.12)' : 'rgba(255, 46, 85, 0.1)',
+                      borderColor: isDark ? 'rgba(255, 51, 92, 0.3)' : 'rgba(255, 46, 85, 0.25)',
+                    },
+                  ]}
+                  onPress={() =>
+                    triggerHud({
+                      name: 'Sony WH-1000XM5',
+                      type: 'headphones',
+                      quality: 'Hi-Res • 96 kHz / 24-bit',
+                      isSpatialAudioAvailable: true,
+                    })
+                  }
+                >
+                  <Ionicons name="headset-outline" size={16} color={colors.primary} />
+                  <Text style={[styles.deviceTestText, { color: colors.primary }]}>
+                    Over-Ear
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  style={[
+                    styles.deviceTestBtn,
+                    {
+                      backgroundColor: isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.1)',
+                      borderColor: isDark ? 'rgba(16, 185, 129, 0.3)' : 'rgba(16, 185, 129, 0.25)',
+                    },
+                  ]}
+                  onPress={() =>
+                    triggerHud({
+                      name: 'Wired EarPods',
+                      type: 'wired',
+                      quality: 'Lossless • 48 kHz',
+                      isSpatialAudioAvailable: false,
+                    })
+                  }
+                >
+                  <Ionicons name="git-commit-outline" size={16} color="#10B981" />
+                  <Text style={[styles.deviceTestText, { color: '#10B981' }]}>
+                    Wired
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  style={[
+                    styles.deviceTestBtn,
+                    {
+                      backgroundColor: isDark ? 'rgba(245, 158, 11, 0.12)' : 'rgba(245, 158, 11, 0.1)',
+                      borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : 'rgba(245, 158, 11, 0.25)',
+                    },
+                  ]}
+                  onPress={() =>
+                    triggerHud({
+                      name: 'iPhone Speaker',
+                      type: 'speaker',
+                      quality: 'Stereo • 48 kHz',
+                      isSpatialAudioAvailable: false,
+                    })
+                  }
+                >
+                  <Ionicons name="volume-high" size={16} color="#F59E0B" />
+                  <Text style={[styles.deviceTestText, { color: '#F59E0B' }]}>
+                    Speaker
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </BlurView>
           </View>
 
@@ -625,6 +757,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontWeight: '600',
   },
+  sectionSubtitle: {
+    fontSize: 13,
+    marginTop: 2,
+    fontWeight: '500',
+  },
   glassCard: {
     borderRadius: RADIUS.clay,
     borderWidth: 1.5,
@@ -753,6 +890,29 @@ const styles = StyleSheet.create({
   },
   versionValue: {
     fontSize: 13,
+    fontWeight: '700',
+  },
+  subLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  deviceTestGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  deviceTestBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: RADIUS.full,
+    borderWidth: 1.2,
+    gap: 6,
+  },
+  deviceTestText: {
+    fontSize: 12,
     fontWeight: '700',
   },
 });

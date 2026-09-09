@@ -30,6 +30,8 @@ import { CustomizationProvider } from './src/context/CustomizationContext';
 import { LibraryProvider } from './src/context/LibraryContext';
 import { PlayerProvider } from './src/context/PlayerContext';
 import { DownloadProvider } from './src/context/DownloadContext';
+import { AudioRouteProvider } from './src/context/AudioRouteContext';
+import { HeadphoneHud } from './src/components/HeadphoneHud';
 import { LibraryScreen } from './src/screens/LibraryScreen';
 import { DownloaderScreen } from './src/screens/DownloaderScreen';
 import { PlaylistsScreen } from './src/screens/PlaylistsScreen';
@@ -209,6 +211,9 @@ function MainNavigator() {
         translucent
       />
 
+      {/* iOS 26 Dynamic Liquid Headphone HUD */}
+      <HeadphoneHud />
+
       {/* Screen Content with Smooth Page Transitions */}
       <View style={styles.contentContainer}>{renderScreenContent()}</View>
 
@@ -224,13 +229,15 @@ function MainNavigator() {
           styles.floatingPillWrapper,
           {
             bottom: floatingPillBottom,
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.9)',
-            shadowColor: isDark ? '#000' : '#8CA0BA',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.95)',
+            shadowColor: isDark ? '#00F2FE' : '#8CA0BA',
+            shadowOpacity: isDark ? 0.35 : 0.22,
+            shadowRadius: isDark ? 16 : 12,
           },
         ]}
       >
         <BlurView
-          intensity={Platform.OS === 'ios' ? 90 : 100}
+          intensity={Platform.OS === 'ios' ? 75 : 100}
           tint={isDark ? 'dark' : 'light'}
           style={styles.pillBlur}
         >
@@ -238,12 +245,24 @@ function MainNavigator() {
           <LinearGradient
             colors={
               isDark
-                ? ['rgba(255, 255, 255, 0.08)', 'rgba(255, 51, 92, 0.04)', 'rgba(15, 23, 42, 0.6)']
-                : ['rgba(255, 255, 255, 0.85)', 'rgba(240, 246, 255, 0.6)', 'rgba(225, 238, 255, 0.4)']
+                ? ['rgba(255, 255, 255, 0.12)', 'rgba(0, 242, 254, 0.05)', 'rgba(10, 18, 28, 0.6)']
+                : ['rgba(255, 255, 255, 0.95)', 'rgba(240, 246, 255, 0.7)', 'rgba(225, 238, 255, 0.45)']
             }
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
+          />
+
+          {/* Reference Style: Top Cyan Rim Light Reflection */}
+          <LinearGradient
+            colors={
+              isDark
+                ? ['rgba(0, 242, 254, 0.65)', 'rgba(56, 189, 248, 0.3)', 'transparent']
+                : ['rgba(255, 255, 255, 0.95)', 'rgba(0, 180, 216, 0.3)', 'transparent']
+            }
+            start={{ x: 0.1, y: 0 }}
+            end={{ x: 0.9, y: 0 }}
+            style={styles.dockTopRim}
           />
 
           <View style={styles.pillTabBar} onLayout={handleBarLayout}>
@@ -255,17 +274,17 @@ function MainNavigator() {
                   indicatorAnimatedStyle,
                   {
                     borderColor: isDark
-                      ? 'rgba(255, 51, 92, 0.4)'
-                      : 'rgba(255, 46, 85, 0.35)',
-                    shadowColor: colors.primary,
+                      ? 'rgba(0, 242, 254, 0.5)'
+                      : 'rgba(255, 46, 85, 0.4)',
+                    shadowColor: isDark ? '#00F2FE' : colors.primary,
                   },
                 ]}
               >
                 <LinearGradient
                   colors={
                     isDark
-                      ? ['rgba(255, 51, 92, 0.25)', 'rgba(255, 0, 122, 0.16)']
-                      : ['rgba(255, 46, 85, 0.16)', 'rgba(255, 0, 122, 0.1)']
+                      ? ['rgba(0, 242, 254, 0.25)', 'rgba(14, 116, 144, 0.15)']
+                      : ['rgba(255, 46, 85, 0.18)', 'rgba(255, 0, 122, 0.12)']
                   }
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -316,9 +335,11 @@ export default function App() {
           <CustomizationProvider>
             <LibraryProvider>
               <PlayerProvider>
-                <DownloadProvider>
-                  <MainNavigator />
-                </DownloadProvider>
+                <AudioRouteProvider>
+                  <DownloadProvider>
+                    <MainNavigator />
+                  </DownloadProvider>
+                </AudioRouteProvider>
               </PlayerProvider>
             </LibraryProvider>
           </CustomizationProvider>
@@ -390,5 +411,14 @@ const styles = StyleSheet.create({
   },
   activePillTabLabel: {
     fontWeight: '800',
+  },
+  dockTopRim: {
+    height: 1.5,
+    width: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1,
   },
 });

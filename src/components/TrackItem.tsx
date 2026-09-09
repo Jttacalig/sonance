@@ -46,32 +46,44 @@ export const TrackItem: React.FC<TrackItemProps> = ({
           borderColor: isCurrent
             ? colors.primary
             : isDark
-            ? 'rgba(255, 255, 255, 0.1)'
-            : 'rgba(255, 255, 255, 0.85)',
+            ? 'rgba(255, 255, 255, 0.14)'
+            : 'rgba(255, 255, 255, 0.92)',
           shadowColor: isCurrent ? colors.primary : isDark ? '#000' : '#8CA0BA',
         },
         isCurrent && styles.activeOuterWrapper,
       ]}
     >
       <BlurView
-        intensity={Platform.OS === 'ios' ? 70 : 100}
+        intensity={Platform.OS === 'ios' ? 85 : 100}
         tint={isDark ? 'dark' : 'light'}
         style={styles.blurContainer}
       >
-        {/* Liquid Glass Gradient Sheen */}
+        {/* iOS 26 Specular Glass Sheen */}
         <LinearGradient
           colors={
             isCurrent
               ? isDark
-                ? ['rgba(255, 51, 92, 0.22)', 'rgba(139, 92, 246, 0.12)', 'rgba(255, 51, 92, 0.05)']
-                : ['rgba(255, 46, 85, 0.16)', 'rgba(255, 255, 255, 0.7)', 'rgba(255, 46, 85, 0.06)']
+                ? ['rgba(255, 51, 92, 0.28)', 'rgba(139, 92, 246, 0.15)', 'rgba(255, 51, 92, 0.06)']
+                : ['rgba(255, 46, 85, 0.2)', 'rgba(255, 255, 255, 0.85)', 'rgba(255, 46, 85, 0.08)']
               : isDark
-              ? ['rgba(255, 255, 255, 0.05)', 'rgba(255, 255, 255, 0.02)', 'transparent']
-              : ['rgba(255, 255, 255, 0.8)', 'rgba(240, 246, 255, 0.5)', 'rgba(230, 240, 255, 0.3)']
+              ? ['rgba(255, 255, 255, 0.09)', 'rgba(255, 255, 255, 0.03)', 'transparent']
+              : ['rgba(255, 255, 255, 0.92)', 'rgba(240, 246, 255, 0.65)', 'rgba(230, 240, 255, 0.4)']
           }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
+        />
+
+        {/* Top Edge Specular Reflection Line */}
+        <LinearGradient
+          colors={
+            isDark
+              ? ['rgba(255, 255, 255, 0.3)', 'rgba(255, 255, 255, 0.05)', 'transparent']
+              : ['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.3)', 'transparent']
+          }
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.itemSpecularLine}
         />
 
         <TouchableOpacity
@@ -258,5 +270,9 @@ const styles = StyleSheet.create({
   actionBtn: {
     padding: SPACING.xs + 2,
     marginLeft: 4,
+  },
+  itemSpecularLine: {
+    height: 1,
+    width: '100%',
   },
 });

@@ -20,6 +20,7 @@ import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
 import { useCustomization } from '../context/CustomizationContext';
+import { useAudioRoute } from '../context/AudioRouteContext';
 import { LIQUID_WALLPAPER_PRESETS } from '../constants/equalizer';
 import { EqualizerModal } from './EqualizerModal';
 import { PlayerBackgroundModal } from './PlayerBackgroundModal';
@@ -62,6 +63,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
   const { toggleFavorite } = useLibrary();
   const { colors, isDark } = useTheme();
   const { playerTheme, activePreset, isEqEnabled } = useCustomization();
+  const { currentDevice, triggerHud } = useAudioRoute();
 
   const [showQueue, setShowQueue] = useState(false);
   const [showEqModal, setShowEqModal] = useState(false);
@@ -363,6 +365,33 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                     >
                       {currentTrack.artist}
                     </Text>
+
+                    {/* iOS 26 Audio Output Chip */}
+                    <TouchableOpacity
+                      activeOpacity={0.75}
+                      onPress={() => triggerHud(currentDevice)}
+                      style={[
+                        styles.audioRouteChip,
+                        {
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.75)',
+                          borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(0, 0, 0, 0.06)',
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={currentDevice.type === 'airpods' || currentDevice.type === 'headphones' ? 'headset' : currentDevice.type === 'bluetooth' ? 'bluetooth' : 'volume-high'}
+                        size={12}
+                        color={colors.primary}
+                        style={{ marginRight: 5 }}
+                      />
+                      <Text style={[styles.audioRouteText, { color: colors.textPrimary }]}>
+                        {currentDevice.name}
+                      </Text>
+                      <Text style={[styles.audioRouteDot, { color: colors.textMuted }]}>•</Text>
+                      <Text style={[styles.audioRouteQuality, { color: colors.primary }]}>
+                        {currentDevice.quality.split('•')[0].trim()}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
 
                   <TouchableOpacity
@@ -388,18 +417,43 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
 
                 {/* Frosted Glass Scrubber Card */}
                 <BlurView
-                  intensity={Platform.OS === 'ios' ? 70 : 100}
+                  intensity={Platform.OS === 'ios' ? 75 : 100}
                   tint={isDark ? 'dark' : 'light'}
                   style={[
                     styles.scrubberCard,
                     {
                       borderColor: isDark
-                        ? 'rgba(255, 255, 255, 0.12)'
-                        : 'rgba(255, 255, 255, 0.8)',
-                      shadowColor: isDark ? '#000' : '#8CA0BA',
+                        ? 'rgba(255, 255, 255, 0.22)'
+                        : 'rgba(255, 255, 255, 0.95)',
+                      shadowColor: isDark ? '#00F2FE' : '#8CA0BA',
+                      shadowOpacity: isDark ? 0.35 : 0.2,
+                      shadowRadius: 14,
                     },
                   ]}
                 >
+                  {/* Subtle Liquid Glass Specular Gradient */}
+                  <LinearGradient
+                    colors={
+                      isDark
+                        ? ['rgba(255, 255, 255, 0.1)', 'rgba(0, 242, 254, 0.04)', 'rgba(10, 18, 28, 0.55)']
+                        : ['rgba(255, 255, 255, 0.95)', 'rgba(240, 246, 255, 0.65)', 'rgba(225, 238, 255, 0.4)']
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+
+                  {/* Reference Style: Top Cyan Rim Light Reflection */}
+                  <LinearGradient
+                    colors={
+                      isDark
+                        ? ['rgba(0, 242, 254, 0.65)', 'rgba(56, 189, 248, 0.25)', 'transparent']
+                        : ['rgba(255, 255, 255, 0.95)', 'rgba(0, 180, 216, 0.25)', 'transparent']
+                    }
+                    start={{ x: 0.1, y: 0 }}
+                    end={{ x: 0.9, y: 0 }}
+                    style={styles.scrubberTopRim}
+                  />
                   <Slider
                     style={styles.slider}
                     minimumValue={0}
@@ -893,6 +947,15 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  scrubberTopRim: {
+    height: 1.5,
+    width: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1,
+  },
   slider: {
     width: '100%',
     height: 36,
@@ -1030,5 +1093,27 @@ const styles = StyleSheet.create({
   closeQueueText: {
     fontSize: 14,
     fontWeight: '700',
+  },
+  audioRouteChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    marginTop: 6,
+  },
+  audioRouteText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  audioRouteDot: {
+    fontSize: 10,
+    marginHorizontal: 4,
+  },
+  audioRouteQuality: {
+    fontSize: 10.5,
+    fontWeight: '800',
   },
 });

@@ -22,6 +22,7 @@ interface PlayerContextType {
   togglePlayPause: () => Promise<void>;
   pauseTrack: () => Promise<void>;
   resumeTrack: () => Promise<void>;
+  stopPlayback: () => Promise<void>;
   skipToNext: () => Promise<void>;
   skipToPrevious: () => Promise<void>;
   seekTo: (seconds: number) => Promise<void>;
@@ -436,6 +437,20 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setIsShuffle((prev) => !prev);
   };
 
+  const stopPlayback = async () => {
+    if (Haptics.impactAsync) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    }
+    isPlayRequestedRef.current = false;
+    cleanupActivePlayer();
+    setIsPlaying(false);
+    setIsLoading(false);
+    setCurrentTrack(null);
+    setPosition(0);
+    setDuration(0);
+    setFullPlayerVisible(false);
+  };
+
   const setSleepTimer = (minutes: number | null) => {
     setSleepTimerMinutes(minutes);
   };
@@ -459,6 +474,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         togglePlayPause,
         pauseTrack,
         resumeTrack,
+        stopPlayback,
         skipToNext,
         skipToPrevious,
         seekTo,

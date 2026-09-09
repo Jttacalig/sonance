@@ -1,8 +1,19 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, Animated } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Platform,
+  Animated,
+  PanResponder,
+  Easing,
+} from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { usePlayer } from '../context/PlayerContext';
 import { useTheme } from '../context/ThemeContext';
 import { SPACING, RADIUS } from '../constants/theme';
@@ -83,10 +94,167 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
     duration,
     togglePlayPause,
     skipToNext,
+    stopPlayback,
     setFullPlayerVisible,
   } = usePlayer();
 
   const { colors, isDark } = useTheme();
+
+  const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const fadeMultiplier = useRef(new Animated.Value(1)).current;
+
+  // Silky GPU-driven Opacity & Scale Interpolations
+  const gestureOpacityX = pan.x.interpolate({
+    inputRange: [-240, -100, 0, 100, 240],
+    outputRange: [0, 0.55, 1, 0.55, 0],
+    extrapolate: 'clamp',
+  });
+
+  const gestureOpacityY = pan.y.interpolate({
+    inputRange: [-15, 0, 45, 85],
+    outputRange: [1, 1, 0.45, 0],
+    extrapolate: 'clamp',
+  });
+
+  const dynamicOpacity = Animated.multiply(
+    fadeMultiplier,
+    Animated.multiply(gestureOpacityX, gestureOpacityY)
+  );
+
+  const dynamicScale = pan.x.interpolate({
+    inputRange: [-240, 0, 240],
+    outputRange: [0.88, 1, 0.88],
+    extrapolate: 'clamp',
+  });
+
+  // Soft spring entrance on new song
+  useEffect(() => {
+    if (currentTrack) {
+      pan.setValue({ x: 0, y: 0 });
+      fadeMultiplier.setValue(0);
+      Animated.parallel([
+        Animated.timing(fadeMultiplier, {
+          toValue: 1,
+          duration: 260,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.spring(pan, {
+          toValue: { x: 0, y: 0 },
+          friction: 8,
+          tension: 60,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [currentTrack?.id]);
+
+  const handleDismiss = () => {
+    if (Haptics.impactAsync) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+    Animated.parallel([
+      Animated.timing(pan.y, {
+        toValue: 70,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeMultiplier, {
+        toValue: 0,
+        duration: 190,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      stopPlayback();
+      pan.setValue({ x: 0, y: 0 });
+      fadeMultiplier.setValue(1);
+    });
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        const isHorizontal = Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+        const isDown = gestureState.dy > 10 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+        return isHorizontal || isDown;
+      },
+      onPanResponderGrant: () => {
+        pan.setValue({ x: 0, y: 0 });
+      },
+      onPanResponderMove: (_, gestureState) => {
+        pan.setValue({
+          x: gestureState.dx,
+          y: Math.max(-10, gestureState.dy),
+        });
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        const isHorizontalDismiss = Math.abs(gestureState.dx) > 65 || Math.abs(gestureState.vx) > 0.35;
+        const isDownDismiss = gestureState.dy > 35 || gestureState.vy > 0.35;
+
+        if (isHorizontalDismiss || isDownDismiss) {
+          if (Haptics.impactAsync) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+          }
+
+          let targetX = 0;
+          let targetY = 0;
+
+          if (isHorizontalDismiss) {
+            targetX = gestureState.dx > 0 ? 380 : -380;
+            targetY = gestureState.dy;
+          } else {
+            targetX = gestureState.dx;
+            targetY = 90;
+          }
+
+          Animated.parallel([
+            Animated.timing(pan, {
+              toValue: { x: targetX, y: targetY },
+              duration: 220,
+              easing: Easing.out(Easing.cubic),
+              useNativeDriver: true,
+            }),
+            Animated.timing(fadeMultiplier, {
+              toValue: 0,
+              duration: 190,
+              easing: Easing.out(Easing.quad),
+              useNativeDriver: true,
+            }),
+          ]).start(() => {
+            stopPlayback();
+            pan.setValue({ x: 0, y: 0 });
+            fadeMultiplier.setValue(1);
+          });
+        } else {
+          // Smooth elastic recovery if not dragged far enough
+          Animated.parallel([
+            Animated.spring(pan, {
+              toValue: { x: 0, y: 0 },
+              friction: 8,
+              tension: 60,
+              useNativeDriver: true,
+            }),
+            Animated.timing(fadeMultiplier, {
+              toValue: 1,
+              duration: 150,
+              useNativeDriver: true,
+            }),
+          ]).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(pan, {
+          toValue: { x: 0, y: 0 },
+          friction: 8,
+          tension: 60,
+          useNativeDriver: true,
+        }).start();
+      },
+    })
+  ).current;
 
   if (!currentTrack) return null;
 
@@ -94,42 +262,61 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
   const progress = totalDuration > 0 ? Math.min(1, Math.max(0, position / totalDuration)) : 0;
 
   return (
-    <View
+    <Animated.View
+      {...panResponder.panHandlers}
       style={[
         styles.wrapper,
         {
           bottom: bottomOffset,
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.85)',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.95)',
           shadowColor: isDark ? colors.primary : '#8CA0BA',
+          transform: [
+            { translateX: pan.x },
+            { translateY: pan.y },
+            { scale: dynamicScale },
+          ],
+          opacity: dynamicOpacity,
         },
       ]}
     >
       <BlurView
-        intensity={Platform.OS === 'ios' ? 85 : 100}
+        intensity={Platform.OS === 'ios' ? 95 : 100}
         tint={isDark ? 'dark' : 'light'}
         style={styles.blurWrapper}
       >
-        {/* Subtle Liquid Gradient Sheen */}
+        {/* iOS 26 Specular Liquid Glass Sheen */}
         <LinearGradient
           colors={
             isDark
-              ? ['rgba(255, 51, 92, 0.12)', 'rgba(139, 92, 246, 0.08)', 'rgba(20, 28, 43, 0.4)']
-              : ['rgba(255, 255, 255, 0.7)', 'rgba(240, 246, 255, 0.5)', 'rgba(230, 240, 255, 0.3)']
+              ? ['rgba(255, 255, 255, 0.16)', 'rgba(255, 51, 92, 0.08)', 'rgba(20, 28, 43, 0.55)']
+              : ['rgba(255, 255, 255, 0.95)', 'rgba(240, 246, 255, 0.7)', 'rgba(225, 238, 255, 0.45)']
           }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
 
+        {/* Top Edge Specular Reflection Line */}
+        <LinearGradient
+          colors={
+            isDark
+              ? ['rgba(255, 255, 255, 0.35)', 'rgba(255, 255, 255, 0.05)', 'transparent']
+              : ['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.3)', 'transparent']
+          }
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.topSpecularLine}
+        />
+
         {/* Top Liquid Progress Timeline Bar */}
         <View
           style={[
             styles.progressBarBackground,
-            { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' },
+            { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)' },
           ]}
         >
           <LinearGradient
-            colors={[colors.primary, '#FF007A', '#9D4EDD']}
+            colors={[colors.primary, '#FF007A', '#00F2FE']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={[styles.progressBarFill, { width: `${progress * 100}%` }]}
@@ -189,7 +376,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
             </View>
           </View>
 
-          {/* Liquid Glass Controls */}
+          {/* Liquid Glass Controls with Circular Glass Buttons */}
           <View style={styles.controls}>
             <TouchableOpacity
               style={styles.playBtnWrapper}
@@ -201,13 +388,13 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <LinearGradient
-                colors={[colors.primary, '#FF007A', colors.primaryDark]}
+                colors={isDark ? ['#00F2FE', '#0099FF', '#FF335C'] : [colors.primary, '#FF007A', colors.primaryDark]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={[
                   styles.playBtn,
                   {
-                    shadowColor: colors.primary,
+                    shadowColor: isDark ? '#00F2FE' : colors.primary,
                   },
                 ]}
               >
@@ -225,19 +412,44 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.controlBtn}
+              style={[
+                styles.circularGlassBtn,
+                {
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.08)',
+                },
+              ]}
               onPress={(e) => {
                 e.stopPropagation();
                 skipToNext();
               }}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="play-forward" size={22} color={colors.textSecondary} />
+              <Ionicons name="play-forward" size={18} color={colors.textPrimary} />
+            </TouchableOpacity>
+
+            {/* Close / Dismiss 'X' Button */}
+            <TouchableOpacity
+              style={[
+                styles.closeGlassBtn,
+                {
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.08)',
+                },
+              ]}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleDismiss();
+              }}
+              hitSlop={{ top: 10, bottom: 10, left: 8, right: 10 }}
+              accessibilityLabel="Stop and close player"
+            >
+              <Ionicons name="close" size={16} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </BlurView>
-    </View>
+    </Animated.View>
   );
 };
 
@@ -366,5 +578,27 @@ const styles = StyleSheet.create({
   controlBtn: {
     padding: SPACING.xs,
     marginLeft: 2,
+  },
+  circularGlassBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    marginLeft: 4,
+  },
+  closeGlassBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    marginLeft: 3,
+  },
+  topSpecularLine: {
+    height: 1.2,
+    width: '100%',
   },
 });
