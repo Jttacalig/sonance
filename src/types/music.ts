@@ -11,6 +11,8 @@ export interface Track {
   sourceUrl?: string; // original source URL
   sourceType: SourceType;
   fileSize?: number; // in bytes
+  format?: string; // m4a, mp3, flac, wav
+  bitrate?: number; // in kbps
   dateAdded: number; // timestamp
   isFavorite?: boolean;
   playCount?: number;

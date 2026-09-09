@@ -24,6 +24,7 @@ import { useAudioRoute } from '../context/AudioRouteContext';
 import { LIQUID_WALLPAPER_PRESETS } from '../constants/equalizer';
 import { EqualizerModal } from './EqualizerModal';
 import { PlayerBackgroundModal } from './PlayerBackgroundModal';
+import { SyncedLyricsView } from './SyncedLyricsView';
 import { SPACING, RADIUS } from '../constants/theme';
 import { TrackItem } from './TrackItem';
 
@@ -68,6 +69,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
   const [showQueue, setShowQueue] = useState(false);
   const [showEqModal, setShowEqModal] = useState(false);
   const [showWallpaperModal, setShowWallpaperModal] = useState(false);
+  const [showLyrics, setShowLyrics] = useState(false);
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekPosition, setSeekPosition] = useState(0);
 
@@ -304,48 +306,61 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
               showsVerticalScrollIndicator={false}
               bounces={false}
             >
-              {/* 1. Artwork Hero Section */}
+              {/* 1. Artwork or Synced Lyrics Hero Section */}
               <View style={styles.artworkSection}>
-                <View
-                  style={[
-                    styles.artworkWrapper,
-                    {
-                      shadowColor: isDark ? colors.primary : '#7928CA',
-                    },
-                  ]}
-                >
-                  <View
+                {showLyrics ? (
+                  <View style={{ width: SCREEN_WIDTH * 0.9, height: artSize }}>
+                    <SyncedLyricsView
+                      track={currentTrack}
+                      currentPosition={displayTime}
+                      onSeekTo={seekTo}
+                      height={artSize}
+                    />
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() => setShowLyrics(true)}
                     style={[
-                      styles.artworkContainer,
+                      styles.artworkWrapper,
                       {
-                        width: artSize,
-                        height: artSize,
-                        borderColor: isDark
-                          ? 'rgba(255, 255, 255, 0.25)'
-                          : 'rgba(255, 255, 255, 0.9)',
+                        shadowColor: isDark ? colors.primary : '#7928CA',
                       },
                     ]}
                   >
-                    {currentTrack.artworkUri ? (
-                      <Image
-                        source={{ uri: currentTrack.artworkUri }}
-                        style={styles.bigArtwork}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <LinearGradient
-                        colors={
-                          isDark
-                            ? ['#20122B', '#111728', '#0B0F17']
-                            : ['#FCE4EC', '#EDE7F6', '#E1F5FE']
-                        }
-                        style={styles.placeholderBigArt}
-                      >
-                        <Ionicons name="musical-notes" size={artSize * 0.38} color={colors.primary} />
-                      </LinearGradient>
-                    )}
-                  </View>
-                </View>
+                    <View
+                      style={[
+                        styles.artworkContainer,
+                        {
+                          width: artSize,
+                          height: artSize,
+                          borderColor: isDark
+                            ? 'rgba(255, 255, 255, 0.25)'
+                            : 'rgba(255, 255, 255, 0.9)',
+                        },
+                      ]}
+                    >
+                      {currentTrack.artworkUri ? (
+                        <Image
+                          source={{ uri: currentTrack.artworkUri }}
+                          style={styles.bigArtwork}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <LinearGradient
+                          colors={
+                            isDark
+                              ? ['#20122B', '#111728', '#0B0F17']
+                              : ['#FCE4EC', '#EDE7F6', '#E1F5FE']
+                          }
+                          style={styles.placeholderBigArt}
+                        >
+                          <Ionicons name="musical-notes" size={artSize * 0.38} color={colors.primary} />
+                        </LinearGradient>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                )}
               </View>
 
               {/* 2. Controls & Details Section (fills the rest of screen naturally) */}
@@ -631,6 +646,39 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                     tint={isDark ? 'dark' : 'light'}
                     style={styles.bottomDockBlur}
                   >
+                    {/* Lyrics Toggle Button */}
+                    <TouchableOpacity
+                      style={[
+                        styles.dockActionBtn,
+                        showLyrics && [
+                          styles.dockActionBtnActive,
+                          {
+                            backgroundColor: isDark
+                              ? 'rgba(0, 242, 254, 0.18)'
+                              : 'rgba(0, 180, 216, 0.14)',
+                            borderColor: colors.accentCyan,
+                          },
+                        ],
+                      ]}
+                      onPress={() => setShowLyrics(!showLyrics)}
+                      activeOpacity={0.75}
+                    >
+                      <Ionicons
+                        name="chatbubble-ellipses"
+                        size={17}
+                        color={showLyrics ? colors.accentCyan : colors.textSecondary}
+                      />
+                      <Text
+                        style={[
+                          styles.dockActionLabel,
+                          { color: showLyrics ? colors.accentCyan : colors.textSecondary },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        Lyrics
+                      </Text>
+                    </TouchableOpacity>
+
                     {/* EQ Button */}
                     <TouchableOpacity
                       style={[

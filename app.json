@@ -2,7 +2,7 @@
   "expo": {
     "name": "Sonance",
     "slug": "apple-player",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -53,17 +53,22 @@
         {
           "iCloudContainerEnvironment": "Production"
         }
+      ],
+      "expo-font",
+      "expo-asset",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0b0e14"
+        }
       ]
     ],
     "extra": {
       "eas": {
         "projectId": "ceb5d3b2-7478-4c1c-9869-4cde280e0755"
       }
-    },
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0b0e14"
     }
   }
 }

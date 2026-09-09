@@ -34,6 +34,58 @@ export interface ThemeColors {
   info: string;
 }
 
+export interface AccentTheme {
+  id: string;
+  name: string;
+  primary: string;
+  primaryLight: string;
+  primaryDark: string;
+  glowColor: string;
+}
+
+export const ACCENT_THEMES: AccentTheme[] = [
+  {
+    id: 'cyan',
+    name: 'Cyber Cyan',
+    primary: '#00F2FE',
+    primaryLight: '#38BDF8',
+    primaryDark: '#0284C7',
+    glowColor: '#00F2FE',
+  },
+  {
+    id: 'rose',
+    name: 'Midnight Rose',
+    primary: '#FF335C',
+    primaryLight: '#FF6685',
+    primaryDark: '#D4183E',
+    glowColor: '#FF335C',
+  },
+  {
+    id: 'violet',
+    name: 'Electric Violet',
+    primary: '#A855F7',
+    primaryLight: '#C084FC',
+    primaryDark: '#7E22CE',
+    glowColor: '#A855F7',
+  },
+  {
+    id: 'emerald',
+    name: 'Emerald Neon',
+    primary: '#10B981',
+    primaryLight: '#34D399',
+    primaryDark: '#059669',
+    glowColor: '#10B981',
+  },
+  {
+    id: 'gold',
+    name: 'Solar Gold',
+    primary: '#F59E0B',
+    primaryLight: '#FBBF24',
+    primaryDark: '#D97706',
+    glowColor: '#F59E0B',
+  },
+];
+
 export const LIGHT_COLORS: ThemeColors = {
   background: '#EAF0F8',
   backgroundSecondary: '#F2F6FC',

@@ -11,7 +11,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
 import { useTheme, ThemeMode } from '../context/ThemeContext';
@@ -25,7 +27,7 @@ import { TransferConfirmationModal } from '../components/TransferConfirmationMod
 import { LiquidBackground } from '../components/LiquidBackground';
 import { AppSettings } from '../types/music';
 import { CandidateFile } from '../services/fileImportService';
-import { SPACING, RADIUS } from '../constants/theme';
+import { SPACING, RADIUS, ACCENT_THEMES } from '../constants/theme';
 import { AUDIO_FORMAT_OPTIONS } from '../constants/endpoints';
 
 export const SettingsScreen: React.FC = () => {
@@ -37,7 +39,7 @@ export const SettingsScreen: React.FC = () => {
     transferCandidateFiles,
   } = useLibrary();
   const { sleepTimerMinutes } = usePlayer();
-  const { colors, isDark, mode, setMode } = useTheme();
+  const { colors, isDark, mode, setMode, accentId, setAccent } = useTheme();
   const { activePreset, playerTheme } = useCustomization();
   const { currentDevice, triggerHud } = useAudioRoute();
 
@@ -164,10 +166,18 @@ export const SettingsScreen: React.FC = () => {
     setCandidateSkippedCount(0);
   };
 
-  const themeOptions: { id: ThemeMode; label: string; icon: any }[] = [
-    { id: 'auto', label: 'Auto (System)', icon: 'phone-portrait-outline' },
-    { id: 'dark', label: 'Dark Mode', icon: 'moon-outline' },
-    { id: 'light', label: 'Light Mode', icon: 'sunny-outline' },
+  const handleCycleAudioQuality = () => {
+    if (Haptics.impactAsync) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    const formats: Array<'m4a' | 'mp3' | 'flac'> = ['m4a', 'mp3', 'flac'];
+    const current = settings?.preferredAudioQuality || 'm4a';
+    const nextIdx = (formats.indexOf(current as any) + 1) % formats.length;
+    handleSaveSettings({ preferredAudioQuality: formats[nextIdx] });
+  };
+
+  const themeModes: { id: ThemeMode; label: string; icon: any }[] = [
+    { id: 'auto', label: 'Auto', icon: 'phone-portrait-outline' },
+    { id: 'dark', label: 'Dark', icon: 'moon-outline' },
+    { id: 'light', label: 'Light', icon: 'sunny-outline' },
   ];
 
   return (
@@ -183,523 +193,399 @@ export const SettingsScreen: React.FC = () => {
           <View style={styles.header}>
             <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Settings</Text>
             <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-              Appearance, Storage & Audio Preferences
+              Preferences, Appearance & Storage
             </Text>
           </View>
 
-          {/* Theme Appearance Selector - Frosted Glass Card */}
-          <View
-            style={[
-              styles.glassCard,
-              {
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
-                shadowColor: isDark ? '#000' : '#8CA0BA',
-              },
-            ]}
-          >
-            <BlurView
-              intensity={Platform.OS === 'ios' ? 70 : 100}
-              tint={isDark ? 'dark' : 'light'}
-              style={styles.cardBlur}
+          {/* SECTION 1: APPEARANCE & THEME (Centralized Card) */}
+          <View style={styles.sectionContainer}>
+            <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+              APPEARANCE & THEME
+            </Text>
+            <View
+              style={[
+                styles.unifiedCard,
+                {
+                  backgroundColor: isDark ? 'rgba(10, 18, 28, 0.55)' : 'rgba(255, 255, 255, 0.75)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : '#FFFFFF',
+                  shadowColor: isDark ? colors.primary : '#8CA0BA',
+                },
+              ]}
             >
-              <View style={styles.cardHeader}>
-                <Ionicons name="color-palette-outline" size={20} color={colors.primary} />
-                <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Appearance</Text>
-              </View>
-
-              <View style={styles.themeOptionsRow}>
-                {themeOptions.map((opt) => {
-                  const isSelected = mode === opt.id;
-                  return (
-                    <TouchableOpacity
-                      key={opt.id}
-                      style={[
-                        styles.themeOptionChip,
-                        {
-                          backgroundColor: isDark
-                            ? 'rgba(255, 255, 255, 0.06)'
-                            : 'rgba(255, 255, 255, 0.7)',
-                          borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#FFFFFF',
-                        },
-                        isSelected && {
-                          borderColor: colors.primary,
-                          backgroundColor: isDark
-                            ? 'rgba(255, 51, 92, 0.2)'
-                            : 'rgba(255, 46, 85, 0.14)',
-                        },
-                      ]}
-                      onPress={() => setMode(opt.id)}
-                    >
-                      <Ionicons
-                        name={opt.icon}
-                        size={16}
-                        color={isSelected ? colors.primary : colors.textSecondary}
-                      />
-                      <Text
-                        style={[
-                          styles.themeOptionText,
-                          { color: isSelected ? colors.primary : colors.textSecondary },
-                        ]}
-                      >
-                        {opt.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </BlurView>
-          </View>
-
-          {/* Audio Equalizer Shortcut Card */}
-          <View
-            style={[
-              styles.glassCard,
-              {
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
-                shadowColor: isDark ? '#000' : '#8CA0BA',
-              },
-            ]}
-          >
-            <BlurView
-              intensity={Platform.OS === 'ios' ? 70 : 100}
-              tint={isDark ? 'dark' : 'light'}
-              style={styles.cardBlur}
-            >
-              <TouchableOpacity
-                style={styles.settingRow}
-                onPress={() => setShowEqModal(true)}
+              <BlurView
+                intensity={Platform.OS === 'ios' ? 70 : 100}
+                tint={isDark ? 'dark' : 'light'}
+                style={styles.cardBlur}
               >
-                <View style={styles.settingRowLeft}>
-                  <Ionicons name="options-outline" size={20} color={colors.primary} />
-                  <View>
-                    <Text style={[styles.settingRowTitle, { color: colors.textPrimary }]}>
-                      Audio Equalizer
-                    </Text>
-                    <Text style={[styles.settingRowSubtitle, { color: colors.textSecondary }]}>
-                      Preset: {activePreset.name} (5-Band Custom)
-                    </Text>
+                {/* Theme Mode Segmented Selector */}
+                <View style={styles.segmentedRow}>
+                  {themeModes.map((opt) => {
+                    const isSelected = mode === opt.id;
+                    return (
+                      <TouchableOpacity
+                        key={opt.id}
+                        activeOpacity={0.8}
+                        style={[
+                          styles.segmentBtn,
+                          isSelected && [
+                            styles.activeSegmentBtn,
+                            {
+                              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.16)' : '#FFFFFF',
+                              borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0,0,0,0.06)',
+                            },
+                          ],
+                        ]}
+                        onPress={() => {
+                          if (Haptics.impactAsync) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                          setMode(opt.id);
+                        }}
+                      >
+                        <Ionicons
+                          name={opt.icon}
+                          size={15}
+                          color={isSelected ? colors.primary : colors.textMuted}
+                        />
+                        <Text
+                          style={[
+                            styles.segmentText,
+                            { color: isSelected ? colors.textPrimary : colors.textSecondary },
+                            isSelected && { fontWeight: '800' },
+                          ]}
+                        >
+                          {opt.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Accent Color Palette Dots */}
+                <View style={[styles.cardDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]} />
+
+                <View style={styles.paletteRow}>
+                  <Text style={[styles.paletteLabel, { color: colors.textSecondary }]}>
+                    Accent Color
+                  </Text>
+                  <View style={styles.paletteDots}>
+                    {ACCENT_THEMES.map((accent) => {
+                      const isSelected = accentId === accent.id;
+                      return (
+                        <TouchableOpacity
+                          key={accent.id}
+                          activeOpacity={0.75}
+                          onPress={() => {
+                            if (Haptics.impactAsync) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                            setAccent(accent.id);
+                          }}
+                          style={[
+                            styles.accentDotWrapper,
+                            isSelected && { borderColor: accent.primary, borderWidth: 2 },
+                          ]}
+                        >
+                          <View style={[styles.accentDot, { backgroundColor: accent.primary }]} />
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            </BlurView>
-          </View>
 
-          {/* iOS 26 Audio Output & Headphone HUD Simulator Card */}
-          <View
-            style={[
-              styles.glassCard,
-              {
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(255, 255, 255, 0.9)',
-                shadowColor: isDark ? '#000' : '#8CA0BA',
-              },
-            ]}
-          >
-            <BlurView
-              intensity={Platform.OS === 'ios' ? 75 : 100}
-              tint={isDark ? 'dark' : 'light'}
-              style={styles.cardBlur}
-            >
-              <View style={styles.cardHeader}>
-                <Ionicons name="headset-outline" size={20} color={colors.accentCyan} />
-                <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
-                  Audio Output & Headphone HUD
-                </Text>
-              </View>
-
-              <Text style={[styles.sectionSubtitle, { color: colors.textSecondary, marginBottom: 12 }]}>
-                Current Route: <Text style={{ color: colors.primary, fontWeight: '700' }}>{currentDevice.name}</Text> ({currentDevice.quality})
-              </Text>
-
-              <Text style={[styles.subLabel, { color: colors.textMuted, marginBottom: 8 }]}>
-                TEST DYNAMIC ISLAND HUD PREVIEWS:
-              </Text>
-
-              <View style={styles.deviceTestGrid}>
-                <TouchableOpacity
-                  activeOpacity={0.75}
-                  style={[
-                    styles.deviceTestBtn,
-                    {
-                      backgroundColor: isDark ? 'rgba(0, 242, 254, 0.12)' : 'rgba(0, 180, 216, 0.1)',
-                      borderColor: isDark ? 'rgba(0, 242, 254, 0.3)' : 'rgba(0, 180, 216, 0.25)',
-                    },
-                  ]}
-                  onPress={() =>
-                    triggerHud({
-                      name: "Jhet's AirPods Pro",
-                      type: 'airpods',
-                      quality: 'Lossless • 24-bit / 48 kHz',
-                      isSpatialAudioAvailable: true,
-                    })
-                  }
-                >
-                  <Ionicons name="headset" size={16} color={isDark ? '#00F2FE' : '#00B4D8'} />
-                  <Text style={[styles.deviceTestText, { color: isDark ? '#00F2FE' : '#00B4D8' }]}>
-                    AirPods Pro
-                  </Text>
-                </TouchableOpacity>
+                {/* Wallpaper Row */}
+                <View style={[styles.cardDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]} />
 
                 <TouchableOpacity
+                  style={styles.settingRow}
                   activeOpacity={0.75}
-                  style={[
-                    styles.deviceTestBtn,
-                    {
-                      backgroundColor: isDark ? 'rgba(255, 51, 92, 0.12)' : 'rgba(255, 46, 85, 0.1)',
-                      borderColor: isDark ? 'rgba(255, 51, 92, 0.3)' : 'rgba(255, 46, 85, 0.25)',
-                    },
-                  ]}
-                  onPress={() =>
-                    triggerHud({
-                      name: 'Sony WH-1000XM5',
-                      type: 'headphones',
-                      quality: 'Hi-Res • 96 kHz / 24-bit',
-                      isSpatialAudioAvailable: true,
-                    })
-                  }
+                  onPress={() => setShowWallpaperModal(true)}
                 >
-                  <Ionicons name="headset-outline" size={16} color={colors.primary} />
-                  <Text style={[styles.deviceTestText, { color: colors.primary }]}>
-                    Over-Ear
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  activeOpacity={0.75}
-                  style={[
-                    styles.deviceTestBtn,
-                    {
-                      backgroundColor: isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.1)',
-                      borderColor: isDark ? 'rgba(16, 185, 129, 0.3)' : 'rgba(16, 185, 129, 0.25)',
-                    },
-                  ]}
-                  onPress={() =>
-                    triggerHud({
-                      name: 'Wired EarPods',
-                      type: 'wired',
-                      quality: 'Lossless • 48 kHz',
-                      isSpatialAudioAvailable: false,
-                    })
-                  }
-                >
-                  <Ionicons name="git-commit-outline" size={16} color="#10B981" />
-                  <Text style={[styles.deviceTestText, { color: '#10B981' }]}>
-                    Wired
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  activeOpacity={0.75}
-                  style={[
-                    styles.deviceTestBtn,
-                    {
-                      backgroundColor: isDark ? 'rgba(245, 158, 11, 0.12)' : 'rgba(245, 158, 11, 0.1)',
-                      borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : 'rgba(245, 158, 11, 0.25)',
-                    },
-                  ]}
-                  onPress={() =>
-                    triggerHud({
-                      name: 'iPhone Speaker',
-                      type: 'speaker',
-                      quality: 'Stereo • 48 kHz',
-                      isSpatialAudioAvailable: false,
-                    })
-                  }
-                >
-                  <Ionicons name="volume-high" size={16} color="#F59E0B" />
-                  <Text style={[styles.deviceTestText, { color: '#F59E0B' }]}>
-                    Speaker
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </BlurView>
-          </View>
-
-          {/* Player Wallpaper & Theme Customizer Card */}
-          <View
-            style={[
-              styles.glassCard,
-              {
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
-                shadowColor: isDark ? '#000' : '#8CA0BA',
-              },
-            ]}
-          >
-            <BlurView
-              intensity={Platform.OS === 'ios' ? 70 : 100}
-              tint={isDark ? 'dark' : 'light'}
-              style={styles.cardBlur}
-            >
-              <TouchableOpacity
-                style={styles.settingRow}
-                onPress={() => setShowWallpaperModal(true)}
-              >
-                <View style={styles.settingRowLeft}>
-                  <Ionicons name="color-palette-outline" size={20} color={colors.accentCyan} />
-                  <View>
-                    <Text style={[styles.settingRowTitle, { color: colors.textPrimary }]}>
-                      Player Wallpaper & Theme
-                    </Text>
-                    <Text style={[styles.settingRowSubtitle, { color: colors.textSecondary }]}>
-                      {playerTheme.type === 'custom'
-                        ? 'Custom Photo Active'
-                        : playerTheme.type === 'preset'
-                        ? 'Liquid Preset'
-                        : 'Dynamic Album Art Aura'}
+                  <View style={styles.rowLeft}>
+                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(0, 242, 254, 0.14)' : 'rgba(0, 180, 216, 0.1)' }]}>
+                      <Ionicons name="color-palette" size={17} color={colors.accentCyan} />
+                    </View>
+                    <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>
+                      Player Wallpaper & Aura
                     </Text>
                   </View>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            </BlurView>
-          </View>
-
-          {/* Storage Usage Card */}
-          <View
-            style={[
-              styles.glassCard,
-              {
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
-                shadowColor: isDark ? '#000' : '#8CA0BA',
-              },
-            ]}
-          >
-            <BlurView
-              intensity={Platform.OS === 'ios' ? 70 : 100}
-              tint={isDark ? 'dark' : 'light'}
-              style={styles.cardBlur}
-            >
-              <View style={styles.cardHeader}>
-                <Ionicons name="pie-chart-outline" size={20} color={colors.primary} />
-                <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
-                  Offline Storage
-                </Text>
-              </View>
-
-              <View style={styles.storageMeter}>
-                <Text style={[styles.storageBigText, { color: colors.primary }]}>
-                  {formatStorage(storageUsage.totalBytes)}
-                </Text>
-                <Text style={[styles.storageSubText, { color: colors.textSecondary }]}>
-                  used across {storageUsage.trackCount} offline{' '}
-                  {storageUsage.trackCount === 1 ? 'song' : 'songs'}
-                </Text>
-              </View>
-
-              <View style={styles.cardActionsRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.outlineBtn,
-                    {
-                      backgroundColor: isDark
-                        ? 'rgba(255, 255, 255, 0.06)'
-                        : 'rgba(255, 255, 255, 0.7)',
-                      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#FFFFFF',
-                    },
-                  ]}
-                  onPress={handleAutoScanStorage}
-                >
-                  <Ionicons name="scan-outline" size={15} color={colors.primary} />
-                  <Text style={[styles.outlineBtnText, { color: colors.primary }]}>
-                    Auto-Scan
-                  </Text>
+                  <View style={styles.rowRight}>
+                    <Text style={[styles.rowValue, { color: colors.textSecondary }]}>
+                      {playerTheme.type === 'custom' ? 'Photo' : playerTheme.type === 'preset' ? 'Liquid' : 'Album Aura'}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                  </View>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[
-                    styles.outlineBtn,
-                    {
-                      backgroundColor: isDark
-                        ? 'rgba(255, 255, 255, 0.06)'
-                        : 'rgba(255, 255, 255, 0.7)',
-                      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#FFFFFF',
-                    },
-                  ]}
-                  onPress={handleImportFiles}
-                >
-                  <Ionicons name="folder-open-outline" size={15} color={colors.textSecondary} />
-                  <Text style={[styles.outlineBtnText, { color: colors.textSecondary }]}>
-                    Choose Files
-                  </Text>
-                </TouchableOpacity>
+                {/* Equalizer Row */}
+                <View style={[styles.cardDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]} />
 
                 <TouchableOpacity
-                  style={[
-                    styles.outlineBtn,
-                    {
-                      backgroundColor: isDark
-                        ? 'rgba(255, 255, 255, 0.06)'
-                        : 'rgba(255, 255, 255, 0.7)',
-                      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#FFFFFF',
-                    },
-                  ]}
-                  onPress={handleClearCache}
+                  style={styles.settingRow}
+                  activeOpacity={0.75}
+                  onPress={() => setShowEqModal(true)}
                 >
-                  <Ionicons name="trash-bin-outline" size={15} color={colors.textSecondary} />
-                  <Text style={[styles.outlineBtnText, { color: colors.textSecondary }]}>
-                    Clean
-                  </Text>
+                  <View style={styles.rowLeft}>
+                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(255, 51, 92, 0.14)' : 'rgba(255, 46, 85, 0.1)' }]}>
+                      <Ionicons name="options" size={17} color={colors.primary} />
+                    </View>
+                    <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>
+                      Audio Equalizer (5-Band)
+                    </Text>
+                  </View>
+                  <View style={styles.rowRight}>
+                    <Text style={[styles.rowValue, { color: colors.primary, fontWeight: '700' }]}>
+                      {activePreset.name}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                  </View>
                 </TouchableOpacity>
-              </View>
-            </BlurView>
+              </BlurView>
+            </View>
           </View>
 
-          {/* Audio Quality Preferences */}
-          <View
-            style={[
-              styles.glassCard,
-              {
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
-                shadowColor: isDark ? '#000' : '#8CA0BA',
-              },
-            ]}
-          >
-            <BlurView
-              intensity={Platform.OS === 'ios' ? 70 : 100}
-              tint={isDark ? 'dark' : 'light'}
-              style={styles.cardBlur}
+          {/* SECTION 2: AUDIO & HARDWARE (Centralized Card) */}
+          <View style={styles.sectionContainer}>
+            <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+              AUDIO & PLAYBACK
+            </Text>
+            <View
+              style={[
+                styles.unifiedCard,
+                {
+                  backgroundColor: isDark ? 'rgba(10, 18, 28, 0.55)' : 'rgba(255, 255, 255, 0.75)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : '#FFFFFF',
+                  shadowColor: isDark ? '#000' : '#8CA0BA',
+                },
+              ]}
             >
-              <View style={styles.cardHeader}>
-                <Ionicons name="options-outline" size={20} color={colors.accentCyan} />
-                <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
-                  Audio Quality
-                </Text>
-              </View>
-
-              <View style={styles.optionsGroup}>
-                {AUDIO_FORMAT_OPTIONS.map((opt) => {
-                  const isSelected = settings?.preferredAudioQuality === opt.id;
-                  return (
-                    <TouchableOpacity
-                      key={opt.id}
-                      style={[
-                        styles.radioItem,
-                        {
-                          backgroundColor: isDark
-                            ? 'rgba(255, 255, 255, 0.06)'
-                            : 'rgba(255, 255, 255, 0.7)',
-                          borderColor: isSelected
-                            ? colors.primary
-                            : isDark
-                            ? 'rgba(255, 255, 255, 0.08)'
-                            : '#FFFFFF',
-                        },
-                        isSelected && {
-                          backgroundColor: isDark
-                            ? 'rgba(255, 51, 92, 0.14)'
-                            : 'rgba(255, 46, 85, 0.1)',
-                        },
-                      ]}
-                      onPress={() => handleSaveSettings({ preferredAudioQuality: opt.id as any })}
-                    >
-                      <Text
-                        style={[
-                          styles.radioText,
-                          { color: isSelected ? colors.primary : colors.textPrimary },
-                          isSelected && styles.activeRadioText,
-                        ]}
-                      >
-                        {opt.label}
-                      </Text>
-                      {isSelected && (
-                        <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </BlurView>
-          </View>
-
-          {/* Sleep Timer Shortcut */}
-          <View
-            style={[
-              styles.glassCard,
-              {
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
-                shadowColor: isDark ? '#000' : '#8CA0BA',
-              },
-            ]}
-          >
-            <BlurView
-              intensity={Platform.OS === 'ios' ? 70 : 100}
-              tint={isDark ? 'dark' : 'light'}
-              style={styles.cardBlur}
-            >
-              <TouchableOpacity
-                style={styles.settingRow}
-                onPress={() => setShowSleepModal(true)}
+              <BlurView
+                intensity={Platform.OS === 'ios' ? 70 : 100}
+                tint={isDark ? 'dark' : 'light'}
+                style={styles.cardBlur}
               >
-                <View style={styles.settingRowLeft}>
-                  <Ionicons name="moon-outline" size={20} color={colors.accentOrange} />
-                  <View>
-                    <Text style={[styles.settingRowTitle, { color: colors.textPrimary }]}>
+                {/* Connected Audio Device & HUD Trigger */}
+                <TouchableOpacity
+                  style={styles.settingRow}
+                  activeOpacity={0.75}
+                  onPress={() => triggerHud(currentDevice)}
+                >
+                  <View style={styles.rowLeft}>
+                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(0, 242, 254, 0.14)' : 'rgba(0, 180, 216, 0.1)' }]}>
+                      <Ionicons name="headset" size={17} color={colors.accentCyan} />
+                    </View>
+                    <View>
+                      <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>
+                        Audio Route & HUD
+                      </Text>
+                      <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]}>
+                        {currentDevice.name} ({currentDevice.quality.split('•')[0].trim()})
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.rowRight}>
+                    <Text style={[styles.badgePillText, { color: colors.accentCyan }]}>
+                      Test HUD
+                    </Text>
+                    <Ionicons name="play-circle" size={18} color={colors.accentCyan} />
+                  </View>
+                </TouchableOpacity>
+
+                {/* Download Audio Quality */}
+                <View style={[styles.cardDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]} />
+
+                <TouchableOpacity
+                  style={styles.settingRow}
+                  activeOpacity={0.75}
+                  onPress={handleCycleAudioQuality}
+                >
+                  <View style={styles.rowLeft}>
+                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.14)' : 'rgba(16, 185, 129, 0.1)' }]}>
+                      <Ionicons name="sparkles" size={17} color="#10B981" />
+                    </View>
+                    <View>
+                      <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>
+                        Preferred Download Quality
+                      </Text>
+                      <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]}>
+                        Tap to switch audio stream format
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.rowRight}>
+                    <Text style={[styles.rowValue, { color: '#10B981', fontWeight: '800' }]}>
+                      {(settings?.preferredAudioQuality || 'm4a').toUpperCase()}
+                    </Text>
+                    <Ionicons name="swap-horizontal" size={16} color={colors.textMuted} />
+                  </View>
+                </TouchableOpacity>
+
+                {/* Sleep Timer */}
+                <View style={[styles.cardDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]} />
+
+                <TouchableOpacity
+                  style={styles.settingRow}
+                  activeOpacity={0.75}
+                  onPress={() => setShowSleepModal(true)}
+                >
+                  <View style={styles.rowLeft}>
+                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.14)' : 'rgba(245, 158, 11, 0.1)' }]}>
+                      <Ionicons name="moon" size={17} color="#F59E0B" />
+                    </View>
+                    <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>
                       Sleep Timer
                     </Text>
-                    <Text style={[styles.settingRowSubtitle, { color: colors.textSecondary }]}>
-                      {sleepTimerMinutes !== null
-                        ? `Pauses in ${sleepTimerMinutes} minutes`
-                        : 'Off'}
-                    </Text>
                   </View>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            </BlurView>
+                  <View style={styles.rowRight}>
+                    <Text style={[styles.rowValue, { color: colors.textSecondary }]}>
+                      {sleepTimerMinutes !== null ? `${sleepTimerMinutes} min` : 'Off'}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                  </View>
+                </TouchableOpacity>
+              </BlurView>
+            </View>
           </View>
 
-          {/* About Info with Official Wordmark Logo */}
-          <View
-            style={[
-              styles.glassCard,
-              {
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
-                shadowColor: isDark ? '#000' : '#8CA0BA',
-              },
-            ]}
-          >
-            <BlurView
-              intensity={Platform.OS === 'ios' ? 70 : 100}
-              tint={isDark ? 'dark' : 'light'}
-              style={styles.cardBlur}
+          {/* SECTION 3: OFFLINE STORAGE & FILES (Centralized Card) */}
+          <View style={styles.sectionContainer}>
+            <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+              OFFLINE STORAGE & FILES
+            </Text>
+            <View
+              style={[
+                styles.unifiedCard,
+                {
+                  backgroundColor: isDark ? 'rgba(10, 18, 28, 0.55)' : 'rgba(255, 255, 255, 0.75)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : '#FFFFFF',
+                  shadowColor: isDark ? '#000' : '#8CA0BA',
+                },
+              ]}
             >
-              <View style={{ alignItems: 'center', marginVertical: SPACING.sm }}>
-                <Image
-                  source={
-                    isDark
-                      ? require('../../assets/sonance-logo-white.png')
-                      : require('../../assets/sonance-logo-black.png')
-                  }
-                  style={{ width: 180, height: 28 }}
-                  resizeMode="contain"
-                />
-              </View>
-              <View style={styles.cardHeader}>
-                <Ionicons
-                  name="information-circle-outline"
-                  size={20}
-                  color={colors.textSecondary}
-                />
-                <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
-                  About Sonance
-                </Text>
-              </View>
-              <Text style={[styles.settingDesc, { color: colors.textSecondary }]}>
-                SONANCE is a high-fidelity offline music player built for iOS & Android. Features 5-band studio equalizer, liquid glass UI, customizable wallpapers, and in-app music search.
-              </Text>
-              <View style={[styles.versionRow, { borderTopColor: colors.border }]}>
-                <Text style={[styles.versionLabel, { color: colors.textMuted }]}>Developer</Text>
-                <Text style={[styles.versionValue, { color: colors.primary, fontWeight: '700' }]}>
-                  Jhet Tacalig
-                </Text>
-              </View>
-              <View style={[styles.versionRow, { borderTopColor: colors.border, marginTop: SPACING.xs }]}>
-                <Text style={[styles.versionLabel, { color: colors.textMuted }]}>Version</Text>
-                <Text style={[styles.versionValue, { color: colors.textSecondary }]}>
-                  1.0.0 (Release)
-                </Text>
-              </View>
-            </BlurView>
+              <BlurView
+                intensity={Platform.OS === 'ios' ? 70 : 100}
+                tint={isDark ? 'dark' : 'light'}
+                style={styles.cardBlur}
+              >
+                {/* Storage Header */}
+                <View style={styles.storageSummaryRow}>
+                  <View>
+                    <Text style={[styles.storageHeading, { color: colors.textPrimary }]}>
+                      {formatStorage(storageUsage.totalBytes)} Used
+                    </Text>
+                    <Text style={[styles.storageSubheading, { color: colors.textSecondary }]}>
+                      {storageUsage.trackCount} offline {storageUsage.trackCount === 1 ? 'track' : 'tracks'} stored
+                    </Text>
+                  </View>
+                  <View style={[styles.storageBadge, { backgroundColor: isDark ? 'rgba(255, 51, 92, 0.15)' : 'rgba(255, 46, 85, 0.1)' }]}>
+                    <Ionicons name="folder-outline" size={16} color={colors.primary} />
+                  </View>
+                </View>
+
+                {/* Auto Scan Row */}
+                <View style={[styles.cardDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]} />
+
+                <TouchableOpacity
+                  style={styles.settingRow}
+                  activeOpacity={0.75}
+                  onPress={handleAutoScanStorage}
+                >
+                  <View style={styles.rowLeft}>
+                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(0, 242, 254, 0.14)' : 'rgba(0, 180, 216, 0.1)' }]}>
+                      <Ionicons name="scan" size={17} color={colors.accentCyan} />
+                    </View>
+                    <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>
+                      Auto-Scan Phone for Audio
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+
+                {/* Browse Files Row */}
+                <View style={[styles.cardDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]} />
+
+                <TouchableOpacity
+                  style={styles.settingRow}
+                  activeOpacity={0.75}
+                  onPress={handleImportFiles}
+                >
+                  <View style={styles.rowLeft}>
+                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(139, 92, 246, 0.14)' : 'rgba(139, 92, 246, 0.1)' }]}>
+                      <Ionicons name="folder-open" size={17} color="#A855F7" />
+                    </View>
+                    <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>
+                      Browse & Select Audio Files
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+
+                {/* Clean Cache Row */}
+                <View style={[styles.cardDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]} />
+
+                <TouchableOpacity
+                  style={styles.settingRow}
+                  activeOpacity={0.75}
+                  onPress={handleClearCache}
+                >
+                  <View style={styles.rowLeft}>
+                    <View style={[styles.rowIconCircle, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : 'rgba(239, 68, 68, 0.1)' }]}>
+                      <Ionicons name="trash-outline" size={17} color={colors.error} />
+                    </View>
+                    <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>
+                      Clean Temporary Cache
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              </BlurView>
+            </View>
+          </View>
+
+          {/* SECTION 4: ABOUT & SYSTEM (Centralized Card) */}
+          <View style={styles.sectionContainer}>
+            <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+              ABOUT & SYSTEM
+            </Text>
+            <View
+              style={[
+                styles.unifiedCard,
+                {
+                  backgroundColor: isDark ? 'rgba(10, 18, 28, 0.55)' : 'rgba(255, 255, 255, 0.75)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : '#FFFFFF',
+                  shadowColor: isDark ? '#000' : '#8CA0BA',
+                },
+              ]}
+            >
+              <BlurView
+                intensity={Platform.OS === 'ios' ? 70 : 100}
+                tint={isDark ? 'dark' : 'light'}
+                style={styles.cardBlur}
+              >
+                <View style={styles.brandRow}>
+                  <Image
+                    source={
+                      isDark
+                        ? require('../../assets/sonance-logo-white.png')
+                        : require('../../assets/sonance-logo-black.png')
+                    }
+                    style={{ width: 140, height: 24 }}
+                    resizeMode="contain"
+                  />
+                  <Text style={[styles.appVersionTag, { color: colors.primary }]}>v1.2.0</Text>
+                </View>
+
+                <View style={[styles.cardDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]} />
+
+                <View style={styles.infoRow}>
+                  <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Developer</Text>
+                  <Text style={[styles.infoValue, { color: colors.textPrimary }]}>Jhet Tacalig</Text>
+                </View>
+
+                <View style={[styles.cardDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]} />
+
+                <View style={styles.infoRow}>
+                  <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Architecture</Text>
+                  <Text style={[styles.infoValue, { color: colors.textPrimary }]}>Native iOS (React Native 0.86)</Text>
+                </View>
+              </BlurView>
+            </View>
           </View>
         </ScrollView>
 
@@ -741,178 +627,199 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.md,
-    paddingBottom: 180,
-    gap: SPACING.md,
+    paddingBottom: 160,
+    gap: SPACING.lg,
   },
   header: {
     marginBottom: SPACING.xs,
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.5,
+    fontWeight: '900',
+    letterSpacing: -0.6,
   },
   headerSubtitle: {
     fontSize: 13,
     marginTop: 2,
     fontWeight: '600',
   },
-  sectionSubtitle: {
-    fontSize: 13,
-    marginTop: 2,
-    fontWeight: '500',
+  sectionContainer: {
+    gap: 8,
   },
-  glassCard: {
+  sectionLabel: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    marginLeft: 4,
+  },
+  unifiedCard: {
     borderRadius: RADIUS.clay,
-    borderWidth: 1.5,
+    borderWidth: 1.2,
     overflow: 'hidden',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
     elevation: 4,
   },
   cardBlur: {
-    padding: SPACING.lg,
-    overflow: 'hidden',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
   },
-  cardHeader: {
+  segmentedRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    marginBottom: SPACING.md,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  themeOptionsRow: {
-    flexDirection: 'row',
-    gap: SPACING.xs,
-  },
-  themeOptionChip: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: SPACING.sm + 2,
-    borderRadius: RADIUS.md,
-    borderWidth: 1.2,
-  },
-  themeOptionText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  storageMeter: {
+    borderRadius: RADIUS.full,
+    padding: 3,
+    gap: 4,
     marginVertical: SPACING.xs,
   },
-  storageBigText: {
-    fontSize: 32,
-    fontWeight: '800',
-  },
-  storageSubText: {
-    fontSize: 13,
-    marginTop: 2,
-    marginBottom: SPACING.md,
-    fontWeight: '600',
-  },
-  cardActionsRow: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-    marginTop: SPACING.xs,
-  },
-  outlineBtn: {
+  segmentBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: SPACING.sm + 4,
+    paddingVertical: 8,
     borderRadius: RADIUS.full,
-    borderWidth: 1.4,
   },
-  outlineBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
+  activeSegmentBtn: {
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  optionsGroup: {
-    gap: SPACING.xs,
+  segmentText: {
+    fontSize: 12.5,
+    fontWeight: '600',
   },
-  radioItem: {
+  cardDivider: {
+    height: 1,
+    width: '100%',
+    marginVertical: SPACING.xs,
+  },
+  paletteRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1.2,
+    paddingVertical: SPACING.xs + 2,
+    paddingHorizontal: SPACING.xs,
   },
-  radioText: {
+  paletteLabel: {
     fontSize: 14,
     fontWeight: '600',
   },
-  activeRadioText: {
-    fontWeight: '800',
+  paletteDots: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+  },
+  accentDotWrapper: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  accentDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
   },
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.xs,
   },
-  settingRowLeft: {
+  rowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.md,
+    gap: SPACING.sm + 2,
+    flex: 1,
   },
-  settingRowTitle: {
-    fontSize: 15,
+  rowIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rowTitle: {
+    fontSize: 14.5,
     fontWeight: '700',
+    letterSpacing: -0.2,
   },
-  settingRowSubtitle: {
+  rowSubtitle: {
     fontSize: 12,
-    marginTop: 2,
-  },
-  settingDesc: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: SPACING.md,
     fontWeight: '500',
+    marginTop: 1,
   },
-  versionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: SPACING.sm,
-    borderTopWidth: 1,
-  },
-  versionLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  versionValue: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  subLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  deviceTestGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  deviceTestBtn: {
+  rowRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: RADIUS.full,
-    borderWidth: 1.2,
     gap: 6,
   },
-  deviceTestText: {
+  rowValue: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  badgePillText: {
     fontSize: 12,
+    fontWeight: '800',
+  },
+  storageSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.xs,
+  },
+  storageHeading: {
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: -0.3,
+  },
+  storageSubheading: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  storageBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.xs,
+  },
+  appVersionTag: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.full,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.xs,
+  },
+  infoLabel: {
+    fontSize: 13.5,
+    fontWeight: '600',
+  },
+  infoValue: {
+    fontSize: 13.5,
     fontWeight: '700',
   },
 });

@@ -14,6 +14,7 @@ import * as Sharing from 'expo-sharing';
 import { Track } from '../types/music';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
+import { MetadataEditorModal } from './MetadataEditorModal';
 import { SPACING, RADIUS } from '../constants/theme';
 
 interface TrackOptionsModalProps {
@@ -32,6 +33,7 @@ export const TrackOptionsModal: React.FC<TrackOptionsModalProps> = ({
   const { playlists, toggleFavorite, addTrackToPlaylist, deleteTrack } = useLibrary();
   const { colors, isDark } = useTheme();
   const [showPlaylistPicker, setShowPlaylistPicker] = useState(false);
+  const [showMetadataEditor, setShowMetadataEditor] = useState(false);
 
   if (!track) return null;
 
@@ -197,6 +199,17 @@ export const TrackOptionsModal: React.FC<TrackOptionsModalProps> = ({
                 </Text>
               </TouchableOpacity>
 
+              {/* Edit Song Info & Tags */}
+              <TouchableOpacity
+                style={styles.optionRow}
+                onPress={() => setShowMetadataEditor(true)}
+              >
+                <Ionicons name="create-outline" size={22} color={colors.textPrimary} />
+                <Text style={[styles.optionLabel, { color: colors.textPrimary }]}>
+                  Edit Song Info & Tags
+                </Text>
+              </TouchableOpacity>
+
               {/* Share File */}
               <TouchableOpacity style={styles.optionRow} onPress={handleShare}>
                 <Ionicons name="share-outline" size={22} color={colors.textPrimary} />
@@ -237,6 +250,16 @@ export const TrackOptionsModal: React.FC<TrackOptionsModalProps> = ({
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* In-App Metadata & Artwork Editor Modal */}
+      <MetadataEditorModal
+        visible={showMetadataEditor}
+        track={track}
+        onClose={() => {
+          setShowMetadataEditor(false);
+          onClose();
+        }}
+      />
     </Modal>
   );
 };

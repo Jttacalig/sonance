@@ -18,6 +18,7 @@ interface LibraryContextType {
   storageUsage: { totalBytes: number; trackCount: number };
   refreshLibrary: () => Promise<void>;
   addTrack: (track: Track) => Promise<void>;
+  updateTrackMetadata: (trackId: string, updates: Partial<Track>) => Promise<void>;
   deleteTrack: (trackId: string) => Promise<void>;
   toggleFavorite: (trackId: string) => Promise<void>;
   createPlaylist: (name: string, description?: string) => Promise<Playlist>;
@@ -67,6 +68,14 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addTrack = async (track: Track) => {
     await storageService.saveTrack(track);
     await refreshLibrary();
+  };
+
+  const updateTrackMetadata = async (trackId: string, updates: Partial<Track>) => {
+    const existing = tracks.find((t) => t.id === trackId);
+    if (!existing) return;
+    const updated: Track = { ...existing, ...updates };
+    await storageService.updateTrack(updated);
+    setTracks((prev) => prev.map((t) => (t.id === trackId ? updated : t)));
   };
 
   const deleteTrack = async (trackId: string) => {
@@ -146,6 +155,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         storageUsage,
         refreshLibrary,
         addTrack,
+        updateTrackMetadata,
         deleteTrack,
         toggleFavorite,
         createPlaylist,
