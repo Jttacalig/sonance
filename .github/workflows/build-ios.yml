@@ -8,11 +8,16 @@ on:
 jobs:
   build-ios:
     name: Build Unsigned IPA
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
+
+      - name: 🍎 Select Xcode 16.2
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.2'
 
       - name: ⚙️ Setup Node.js
         uses: actions/setup-node@v4
@@ -29,24 +34,19 @@ jobs:
       - name: 🔨 Compile iOS Binary (Unsigned)
         run: |
           cd ios
-          pod install || true
           
-          # Auto-detect workspace and scheme
+          # Auto-detect workspace
           WORKSPACE=$(ls -d *.xcworkspace 2>/dev/null | head -n 1)
-          
           if [ -z "$WORKSPACE" ]; then
-            PROJECT=$(ls -d *.xcodeproj 2>/dev/null | head -n 1)
-            SCHEME=$(basename "$PROJECT" .xcodeproj)
-            BUILD_TARGET="-project $PROJECT"
-          else
-            SCHEME=$(basename "$WORKSPACE" .xcworkspace)
-            BUILD_TARGET="-workspace $WORKSPACE"
+            pod install
+            WORKSPACE=$(ls -d *.xcworkspace 2>/dev/null | head -n 1)
           fi
           
-          echo "Building Target: $BUILD_TARGET with Scheme: $SCHEME"
+          SCHEME=$(basename "$WORKSPACE" .xcworkspace)
+          echo "Building Workspace: $WORKSPACE with Scheme: $SCHEME"
           
           xcodebuild \
-            $BUILD_TARGET \
+            -workspace "$WORKSPACE" \
             -scheme "$SCHEME" \
             -configuration Release \
             -destination 'generic/platform=iOS' \
