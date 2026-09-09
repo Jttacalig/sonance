@@ -9,6 +9,7 @@ import {
   LayoutChangeEvent,
 } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -309,19 +310,21 @@ function MainNavigator() {
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <CustomizationProvider>
-          <LibraryProvider>
-            <PlayerProvider>
-              <DownloadProvider>
-                <MainNavigator />
-              </DownloadProvider>
-            </PlayerProvider>
-          </LibraryProvider>
-        </CustomizationProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <CustomizationProvider>
+            <LibraryProvider>
+              <PlayerProvider>
+                <DownloadProvider>
+                  <MainNavigator />
+                </DownloadProvider>
+              </PlayerProvider>
+            </LibraryProvider>
+          </CustomizationProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
