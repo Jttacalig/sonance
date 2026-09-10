@@ -23,11 +23,21 @@ jobs:
           node-version: 22
           cache: 'npm'
 
+      - name: Cache CocoaPods downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods
+          key: ${{ runner.os }}-cocoapods-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-cocoapods-
+
       - name: 📦 Install Dependencies
-        run: npm install --legacy-peer-deps
+        run: npm ci --legacy-peer-deps
 
       - name: 🛠️ Expo Prebuild iOS Project
-        run: npx expo prebuild --platform ios --clean
+        run: npx expo prebuild --platform ios --clean --no-install
 
       - name: 🔨 Compile iOS Binary (Unsigned)
         run: |
