@@ -7,8 +7,9 @@ import {
   StatusBar,
   Platform,
   LayoutChangeEvent,
+  BackHandler,
 } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -78,12 +79,34 @@ const TABS: { id: Tab; label: string; icon: any; activeIcon: any }[] = [
 function MainNavigator() {
   const { colors, isDark } = useTheme();
   const { activeCount } = useDownloads();
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<Tab>('library');
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
   const [barWidth, setBarWidth] = useState<number>(0);
 
   const activeIndex = useSharedValue<number>(0);
   const pillScale = useSharedValue<number>(1);
+
+  // Android hardware back button handler
+  useEffect(() => {
+    const onBackPress = () => {
+      // 1. If viewing playlist detail, go back to playlists list
+      if (selectedPlaylist) {
+        setSelectedPlaylist(null);
+        return true;
+      }
+      // 2. If not on Library tab, switch to Library tab
+      if (activeTab !== 'library') {
+        handleTabPress('library', 0);
+        return true;
+      }
+      // 3. Otherwise allow default system back (exit app)
+      return false;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [selectedPlaylist, activeTab]);
 
   const handleTabPress = (tab: Tab, index: number) => {
     if (Haptics.impactAsync) {
@@ -205,7 +228,7 @@ function MainNavigator() {
     }
   };
 
-  const floatingPillBottom = Platform.OS === 'ios' ? 24 : 16;
+  const floatingPillBottom = Platform.OS === 'ios' ? 24 : Math.max(16, insets.bottom + 8);
   const miniPlayerBottom = floatingPillBottom + 70;
 
   return (

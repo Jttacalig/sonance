@@ -208,7 +208,19 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
       visible={isFullPlayerVisible}
       animationType="slide"
       presentationStyle="pageSheet"
-      onRequestClose={() => setFullPlayerVisible(false)}
+      onRequestClose={() => {
+        if (showLyrics) {
+          setShowLyrics(false);
+        } else if (showQueue) {
+          setShowQueue(false);
+        } else if (showEqModal) {
+          setShowEqModal(false);
+        } else if (showWallpaperModal) {
+          setShowWallpaperModal(false);
+        } else {
+          setFullPlayerVisible(false);
+        }
+      }}
     >
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Dynamic Customizable Backdrop */}
