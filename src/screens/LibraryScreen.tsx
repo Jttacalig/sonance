@@ -17,6 +17,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
 import { useTheme } from '../context/ThemeContext';
@@ -29,6 +30,7 @@ import { CandidateFile } from '../services/fileImportService';
 import { SPACING, RADIUS } from '../constants/theme';
 
 type FilterTab = 'all' | 'favorites' | 'imported' | 'recent';
+type SortOption = 'date_desc' | 'date_asc' | 'alpha_asc' | 'alpha_desc';
 
 interface LibraryScreenProps {
   onNavigateToDownloader?: () => void;
@@ -51,8 +53,26 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
 
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortOption, setSortOption] = useState<SortOption>('date_desc');
+  const [isSortMenuVisible, setIsSortMenuVisible] = useState(false);
   const [selectedTrackForOptions, setSelectedTrackForOptions] = useState<Track | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const flatListRef = React.useRef<FlatList<Track>>(null);
+
+  // Load saved sort option on mount
+  React.useEffect(() => {
+    AsyncStorage.getItem('librarySortOption').then((saved) => {
+      if (saved) {
+        setSortOption(saved as SortOption);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const handleSortChange = (newSort: SortOption) => {
+    setSortOption(newSort);
+    setIsSortMenuVisible(false);
+    AsyncStorage.setItem('librarySortOption', newSort).catch(() => {});
+  };
 
   // Transfer Modal states
   const [candidateModalVisible, setCandidateModalVisible] = useState(false);
@@ -66,17 +86,17 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
 
     switch (activeTab) {
       case 'favorites':
-        list = favorites;
+        list = [...favorites];
         break;
       case 'imported':
         list = tracks.filter((t) => t.sourceType === 'imported');
         break;
       case 'recent':
-        list = [...tracks].sort((a, b) => b.dateAdded - a.dateAdded);
+        list = [...tracks];
         break;
       case 'all':
       default:
-        list = tracks;
+        list = [...tracks];
         break;
     }
 
@@ -90,8 +110,20 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
       );
     }
 
+    if (activeTab === 'recent') {
+      list.sort((a, b) => b.dateAdded - a.dateAdded);
+    } else {
+      list.sort((a, b) => {
+        if (sortOption === 'date_desc') return b.dateAdded - a.dateAdded;
+        if (sortOption === 'date_asc') return a.dateAdded - b.dateAdded;
+        if (sortOption === 'alpha_asc') return a.title.localeCompare(b.title);
+        if (sortOption === 'alpha_desc') return b.title.localeCompare(a.title);
+        return 0;
+      });
+    }
+
     return list;
-  }, [tracks, favorites, activeTab, searchQuery]);
+  }, [tracks, favorites, activeTab, searchQuery, sortOption]);
 
   const handlePlayAll = (shuffle = false) => {
     if (filteredTracks.length === 0) return;
@@ -100,6 +132,19 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
       playTrack(shuffled[0], shuffled);
     } else {
       playTrack(filteredTracks[0], filteredTracks);
+    }
+  };
+
+  const scrollToCurrentTrack = () => {
+    if (!currentTrack) return;
+    const index = filteredTracks.findIndex((t) => t.id === currentTrack.id);
+    if (index !== -1) {
+      if (Haptics.impactAsync) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      }
+      flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+    } else {
+      Alert.alert('Not Found', 'The currently playing track is not in the current view.');
     }
   };
 
@@ -404,8 +449,30 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
           })}
         </View>
 
+        {/* Action Row: Locate & Sort */}
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[styles.actionButton, { opacity: currentTrack ? 1 : 0.5 }]}
+            onPress={scrollToCurrentTrack}
+            disabled={!currentTrack}
+          >
+            <Ionicons name="locate" size={16} color={colors.primary} />
+            <Text style={[styles.actionButtonText, { color: colors.primary }]}>Locate Playing</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setIsSortMenuVisible(true)}
+          >
+            <Ionicons name="swap-vertical" size={16} color={colors.textPrimary} />
+            <Text style={[styles.actionButtonText, { color: colors.textPrimary }]}>
+              {sortOption === 'date_desc' ? 'Newest First' : sortOption === 'date_asc' ? 'Oldest First' : sortOption === 'alpha_asc' ? 'A-Z' : 'Z-A'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Songs List */}
         <FlatList
+          ref={flatListRef}
           data={filteredTracks}
           keyExtractor={(item) => item.id}
           refreshControl={
@@ -427,6 +494,12 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
               onOptionsPress={() => setSelectedTrackForOptions(item)}
             />
           )}
+          onScrollToIndexFailed={(info) => {
+            const wait = new Promise((resolve) => setTimeout(resolve, 500));
+            wait.then(() => {
+              flatListRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.5 });
+            });
+          }}
           ListEmptyComponent={
             !isLoading ? (
               <View style={styles.emptyContainer}>
@@ -462,12 +535,20 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
                           styles.emptyCtaBtn,
                           {
                             backgroundColor: isDark ? '#FFFFFF' : colors.primary,
-                            shadowColor: isDark ? '#FFFFFF' : colors.primary,
+                            shadowColor: isDark ? '#FFF' : colors.primary,
                           },
                         ]}
                       >
-                        <Ionicons name="scan-outline" size={18} color={isDark ? '#070A10' : '#FFF'} />
-                        <Text style={[styles.emptyCtaText, { color: isDark ? '#070A10' : '#FFF' }]}>Auto-Scan Phone for Songs</Text>
+                        {isScanning ? (
+                          <ActivityIndicator size="small" color={isDark ? '#000' : '#FFF'} />
+                        ) : (
+                          <>
+                            <Ionicons name="scan-outline" size={18} color={isDark ? '#000' : '#FFF'} />
+                            <Text style={[styles.emptyCtaText, { color: isDark ? '#000' : '#FFF' }]}>
+                              Auto-Scan Phone
+                            </Text>
+                          </>
+                        )}
                       </View>
                     </TouchableOpacity>
 
@@ -518,6 +599,42 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
             ) : null
           }
         />
+
+        {/* Sort Modal */}
+        {isSortMenuVisible && (
+          <View style={StyleSheet.absoluteFill}>
+            <TouchableOpacity 
+              style={styles.modalOverlay} 
+              activeOpacity={1} 
+              onPress={() => setIsSortMenuVisible(false)} 
+            />
+            <View style={[styles.sortModalContainer, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF' }]}>
+              <View style={styles.sortModalHeader}>
+                <Text style={[styles.sortModalTitle, { color: colors.textPrimary }]}>Sort Library</Text>
+                <TouchableOpacity onPress={() => setIsSortMenuVisible(false)}>
+                  <Ionicons name="close" size={24} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              
+              <TouchableOpacity style={styles.sortOptionRow} onPress={() => handleSortChange('date_desc')}>
+                <Text style={[styles.sortOptionText, { color: colors.textPrimary }]}>Date Added (Newest First)</Text>
+                {sortOption === 'date_desc' && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.sortOptionRow} onPress={() => handleSortChange('date_asc')}>
+                <Text style={[styles.sortOptionText, { color: colors.textPrimary }]}>Date Added (Oldest First)</Text>
+                {sortOption === 'date_asc' && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.sortOptionRow} onPress={() => handleSortChange('alpha_asc')}>
+                <Text style={[styles.sortOptionText, { color: colors.textPrimary }]}>Alphabetical (A to Z)</Text>
+                {sortOption === 'alpha_asc' && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.sortOptionRow} onPress={() => handleSortChange('alpha_desc')}>
+                <Text style={[styles.sortOptionText, { color: colors.textPrimary }]}>Alphabetical (Z to A)</Text>
+                {sortOption === 'alpha_desc' && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Transfer Confirmation Modal */}
         <TransferConfirmationModal
@@ -749,5 +866,61 @@ const styles = StyleSheet.create({
   emptySecondaryText: {
     fontSize: 15,
     fontWeight: '800',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    marginBottom: SPACING.xs,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: RADIUS.full,
+    backgroundColor: 'rgba(150, 150, 150, 0.1)',
+  },
+  actionButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  sortModalContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopLeftRadius: RADIUS.lg,
+    borderTopRightRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    paddingBottom: 110, // Extra padding to clear the floating tab bar
+  },
+  sortModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+  },
+  sortModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  sortOptionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(150, 150, 150, 0.2)',
+  },
+  sortOptionText: {
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
