@@ -55,7 +55,11 @@ export const MetadataEditorModal: React.FC<MetadataEditorModalProps> = ({
 
   if (!track) return null;
 
+  const [isPickingArtwork, setIsPickingArtwork] = useState(false);
+
   const handlePickArtwork = async () => {
+    if (isPickingArtwork) return;
+    setIsPickingArtwork(true);
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['image/*'],
@@ -71,6 +75,8 @@ export const MetadataEditorModal: React.FC<MetadataEditorModalProps> = ({
     } catch (e) {
       console.warn('Artwork picker error:', e);
       Alert.alert('Error', 'Failed to select image from files.');
+    } finally {
+      setIsPickingArtwork(false);
     }
   };
 

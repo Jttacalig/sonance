@@ -49,6 +49,7 @@ export interface ScanResult {
 }
 
 class FileImportService {
+  private isPickerOpen = false;
   /**
    * Checks if a track already exists in the user's library
    */
@@ -133,6 +134,12 @@ class FileImportService {
    * Opens iOS document picker and extracts candidate files without copying yet
    */
   async pickCandidateFiles(): Promise<CandidatePickResult> {
+    // Guard against concurrent picker calls (iOS throws PickingInProgressException)
+    if (this.isPickerOpen) {
+      return { canceled: true, candidates: [], foundCount: 0, skippedCount: 0, skippedTitles: [] };
+    }
+
+    this.isPickerOpen = true;
     await storageService.initStorage();
     const existingTracks = await storageService.getAllTracks();
 
@@ -200,6 +207,8 @@ class FileImportService {
     } catch (error) {
       console.error('Document picker error:', error);
       throw error;
+    } finally {
+      this.isPickerOpen = false;
     }
   }
 

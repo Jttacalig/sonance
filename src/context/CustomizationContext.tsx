@@ -135,7 +135,10 @@ export const CustomizationProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
+  let isWallpaperPickerOpen = false;
   const pickCustomWallpaper = async (autoSave: boolean = false): Promise<string | null> => {
+    if (isWallpaperPickerOpen) return null;
+    isWallpaperPickerOpen = true;
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['image/*'],
@@ -169,6 +172,8 @@ export const CustomizationProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (error) {
       console.error('Error picking custom wallpaper:', error);
       throw error;
+    } finally {
+      isWallpaperPickerOpen = false;
     }
   };
 

@@ -17,8 +17,38 @@ export interface ExtractedInfo {
   format?: AudioFormat;
 }
 
+/**
+ * Simple mutex to serialize stream resolution calls so concurrent downloads
+ * don't overwhelm the converter API with simultaneous requests.
+ */
+class StreamResolutionMutex {
+  private queue: (() => void)[] = [];
+  private locked = false;
+
+  async acquire(): Promise<void> {
+    if (!this.locked) {
+      this.locked = true;
+      return;
+    }
+    return new Promise<void>(resolve => {
+      this.queue.push(resolve);
+    });
+  }
+
+  release(): void {
+    if (this.queue.length > 0) {
+      const next = this.queue.shift()!;
+      // Add small delay between consecutive resolutions to avoid rate-limiting
+      setTimeout(() => next(), 800);
+    } else {
+      this.locked = false;
+    }
+  }
+}
+
 class DownloaderService {
   private activeDownloads: Map<string, FileSystem.DownloadResumable> = new Map();
+  private streamMutex = new StreamResolutionMutex();
 
   detectSourceType(url: string): SourceType {
     const lower = url.toLowerCase();
@@ -342,6 +372,88 @@ class DownloaderService {
   }
 
   /**
+   * Validates downloaded file has genuine audio content by checking file signatures (magic bytes).
+   * Returns true if valid audio, false if corrupt/HTML/video-only/empty.
+   */
+  private async validateAudioFile(filePath: string, expectedExt: string): Promise<boolean> {
+    try {
+      // Read first 12 bytes as base64 and decode to check magic bytes
+      const base64Header = await FileSystem.readAsStringAsync(filePath, {
+        encoding: FileSystem.EncodingType.Base64,
+        length: 12,
+      });
+
+      // Decode base64 to byte array
+      const binaryString = atob(base64Header);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      // Check for HTML/JSON error pages (common corrupt download)
+      // '<' = 0x3C, '{' = 0x7B
+      if (bytes[0] === 0x3C || bytes[0] === 0x7B) {
+        // Try reading as text to confirm
+        try {
+          const textSample = await FileSystem.readAsStringAsync(filePath, {
+            encoding: FileSystem.EncodingType.UTF8,
+            length: 200,
+          });
+          if (
+            textSample.includes('<!DOCTYPE') ||
+            textSample.includes('<html') ||
+            textSample.includes('{"status":"error"') ||
+            textSample.includes('{"error"')
+          ) {
+            logger.download('Audio validation failed: file contains HTML/JSON error response');
+            return false;
+          }
+        } catch {}
+      }
+
+      // M4A / MP4 / AAC container: bytes 4-7 = "ftyp"
+      if (bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) {
+        return true;
+      }
+
+      // MP3 with ID3 tag: bytes 0-2 = "ID3"
+      if (bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) {
+        return true;
+      }
+
+      // MP3 frame sync without ID3: 0xFF 0xFB, 0xFF 0xF3, 0xFF 0xF2, 0xFF 0xE2
+      if (bytes[0] === 0xFF && (bytes[1] === 0xFB || bytes[1] === 0xF3 || bytes[1] === 0xF2 || bytes[1] === 0xE2)) {
+        return true;
+      }
+
+      // FLAC: bytes 0-3 = "fLaC"
+      if (bytes[0] === 0x66 && bytes[1] === 0x4C && bytes[2] === 0x61 && bytes[3] === 0x43) {
+        return true;
+      }
+
+      // WAV: bytes 0-3 = "RIFF" and bytes 8-11 = "WAVE"
+      if (
+        bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+        bytes[8] === 0x57 && bytes[9] === 0x41 && bytes[10] === 0x56 && bytes[11] === 0x45
+      ) {
+        return true;
+      }
+
+      // OGG: bytes 0-3 = "OggS"
+      if (bytes[0] === 0x4F && bytes[1] === 0x67 && bytes[2] === 0x67 && bytes[3] === 0x53) {
+        return true;
+      }
+
+      logger.download(`Audio validation failed: unrecognized header bytes [${Array.from(bytes.slice(0, 8)).map(b => '0x' + b.toString(16).toUpperCase().padStart(2, '0')).join(', ')}]`);
+      return false;
+    } catch (err) {
+      logger.download(`Audio validation error: ${err}`);
+      // If we can't read the file at all, it's not valid
+      return false;
+    }
+  }
+
+  /**
    * Starts downloading track to local disk and returns Track object
    */
   async startDownload(
@@ -354,17 +466,27 @@ class DownloaderService {
 
     try {
       logger.download(`Initiating download for: "${downloadItem.title}" (${preferredFormat.toUpperCase()})`);
-      // 1. Resolve stream
+      // 1. Resolve stream (serialized via mutex to prevent API rate-limiting)
       onStatusChange('resolving', `Extracting ${preferredFormat.toUpperCase()} stream...`);
       onProgress(0.05, 0, 0);
-      const { streamUrl, finalExtension } = await this.resolveAudioStreamUrl(
-        downloadItem.url,
-        preferredFormat,
-        (pct, msg) => {
-          onProgress(pct, 0, 0);
-          if (msg) onStatusChange('resolving', msg);
-        }
-      );
+
+      await this.streamMutex.acquire();
+      let streamUrl: string;
+      let finalExtension: string;
+      try {
+        const resolved = await this.resolveAudioStreamUrl(
+          downloadItem.url,
+          preferredFormat,
+          (pct, msg) => {
+            onProgress(pct, 0, 0);
+            if (msg) onStatusChange('resolving', msg);
+          }
+        );
+        streamUrl = resolved.streamUrl;
+        finalExtension = resolved.finalExtension;
+      } finally {
+        this.streamMutex.release();
+      }
       logger.download(`Stream resolved successfully for "${downloadItem.title}"`);
 
       // 2. Prepare URL-safe file destination (no spaces or non-URL chars in file name)
@@ -424,20 +546,36 @@ class DownloaderService {
       const result = await downloadResumable.downloadAsync();
       this.activeDownloads.delete(downloadItem.id);
 
-      // Verify file integrity
+      // Verify file integrity with audio header validation
       let fileInfo = await FileSystem.getInfoAsync(destinationFile);
-      let isValidAudio = fileInfo.exists && fileInfo.size !== undefined && fileInfo.size >= 50 * 1024;
+      let isValidAudio = false;
 
-      // If primary video returned empty stream (common for VEVO/protected videos), auto fallback to Topic/Audio release
+      if (fileInfo.exists && fileInfo.size !== undefined && fileInfo.size >= 50 * 1024) {
+        isValidAudio = await this.validateAudioFile(destinationFile, fileExt);
+      }
+
+      // If primary video returned empty/corrupt stream (common for VEVO/protected videos), auto fallback to Topic/Audio release
       if (!isValidAudio) {
+        logger.download(`Primary download invalid for "${downloadItem.title}", trying Topic/Audio fallback...`);
         try {
           await FileSystem.deleteAsync(destinationFile, { idempotent: true });
         } catch {}
 
         onStatusChange('resolving', 'Resolving clean audio master stream...');
-        const fallbackUrl = await this.findTopicAudioUrl(downloadItem.title, downloadItem.artist);
-        if (fallbackUrl && fallbackUrl !== downloadItem.url) {
-          const fallbackStream = await this.resolveAudioStreamUrl(fallbackUrl, preferredFormat);
+
+        // Serialize fallback resolution through mutex too
+        await this.streamMutex.acquire();
+        let fallbackStream: { streamUrl: string; finalExtension: string } | null = null;
+        try {
+          const fallbackUrl = await this.findTopicAudioUrl(downloadItem.title, downloadItem.artist);
+          if (fallbackUrl && fallbackUrl !== downloadItem.url) {
+            fallbackStream = await this.resolveAudioStreamUrl(fallbackUrl, preferredFormat);
+          }
+        } finally {
+          this.streamMutex.release();
+        }
+
+        if (fallbackStream) {
           const fallbackResumable = FileSystem.createDownloadResumable(
             fallbackStream.streamUrl,
             destinationFile,
@@ -457,14 +595,12 @@ class DownloaderService {
             }
           );
           this.activeDownloads.set(downloadItem.id, fallbackResumable);
-          const fbResult = await fallbackResumable.downloadAsync();
+          await fallbackResumable.downloadAsync();
           this.activeDownloads.delete(downloadItem.id);
 
-          if (fbResult && fbResult.uri) {
-            fileInfo = await FileSystem.getInfoAsync(fbResult.uri);
-            if (fileInfo.exists && fileInfo.size && fileInfo.size >= 50 * 1024) {
-              isValidAudio = true;
-            }
+          fileInfo = await FileSystem.getInfoAsync(destinationFile);
+          if (fileInfo.exists && fileInfo.size && fileInfo.size >= 50 * 1024) {
+            isValidAudio = await this.validateAudioFile(destinationFile, fileExt);
           }
         }
       }
@@ -473,31 +609,7 @@ class DownloaderService {
         try {
           await FileSystem.deleteAsync(destinationFile, { idempotent: true });
         } catch {}
-        throw new Error('Audio stream was incomplete. Please try another search result for this song.');
-      }
-
-      // Check for HTML error payload
-      try {
-        const headerSample = await FileSystem.readAsStringAsync(destinationFile, {
-          encoding: FileSystem.EncodingType.UTF8,
-          length: 150,
-        });
-        if (
-          headerSample.includes('<!DOCTYPE') ||
-          headerSample.includes('<html') ||
-          headerSample.includes('{"status":"error"') ||
-          headerSample.includes('{"error"')
-        ) {
-          try {
-            await FileSystem.deleteAsync(destinationFile, { idempotent: true });
-          } catch {}
-          throw new Error('Audio stream returned an error response from server. Please retry.');
-        }
-      } catch (checkErr: any) {
-        if (checkErr?.message?.includes('Audio stream returned an error')) {
-          throw checkErr;
-        }
-        // binary files may fail UTF-8 decoding, which is expected for raw audio
+        throw new Error('Audio stream was corrupt or incomplete. Please try another search result for this song.');
       }
 
       onStatusChange('saving', 'Processing offline artwork & metadata...');
