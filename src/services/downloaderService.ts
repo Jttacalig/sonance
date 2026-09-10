@@ -3,6 +3,7 @@ import { createAudioPlayer } from 'expo-audio';
 import { DownloadItem, DownloadStatus, SourceType, Track } from '../types/music';
 import { storageService, MUSIC_DIR, ARTWORK_DIR } from './storageService';
 import { DEFAULT_COBALT_INSTANCES, AudioFormat, DEFAULT_USER_AGENT } from '../constants/endpoints';
+import { streamExtractorService } from './streamExtractorService';
 import { logger } from './loggerService';
 
 export interface ExtractedInfo {
@@ -57,6 +58,27 @@ class DownloaderService {
     }
     if (lower.includes('soundcloud.com')) {
       return 'soundcloud';
+    }
+    if (lower.includes('instagram.com')) {
+      return 'instagram';
+    }
+    if (lower.includes('tiktok.com')) {
+      return 'tiktok';
+    }
+    if (lower.includes('twitter.com') || lower.includes('x.com')) {
+      return 'twitter';
+    }
+    if (lower.includes('facebook.com') || lower.includes('fb.watch')) {
+      return 'facebook';
+    }
+    if (lower.includes('open.spotify.com')) {
+      return 'spotify';
+    }
+    if (lower.includes('reddit.com')) {
+      return 'reddit';
+    }
+    if (lower.includes('twitch.tv')) {
+      return 'twitch';
     }
     if (
       lower.endsWith('.mp3') ||
@@ -225,7 +247,12 @@ class DownloaderService {
   }
 
   /**
-   * Resolves audio stream URL from multi-provider extraction pipeline
+   * Resolves audio stream URL from multi-provider extraction pipeline.
+   * 
+   * Pipeline order:
+   * 1. Direct Extraction (Piped → Invidious) — YouTube M4A/AAC only, no middleman
+   * 2. loader.to — server-side converter (supports all formats)
+   * 3. Cobalt API — multi-platform fallback (supports all platforms + formats)
    */
   async resolveAudioStreamUrl(
     url: string,
@@ -246,9 +273,37 @@ class DownloaderService {
       : 'm4a';
 
     const finalExtension = formatParam;
-    onProgress?.(0.08, 'Connecting to audio converter...');
 
-    // 1. Primary: High-Speed Audio Stream Resolver (supports m4a, mp3, flac, wav)
+    // ──────────────────────────────────────────────────────────────────
+    // TIER 1: Direct Stream Extraction (Piped → Invidious)
+    // YouTube only, M4A/AAC only — no converter proxy needed
+    // ──────────────────────────────────────────────────────────────────
+    if (sourceType === 'youtube') {
+      onProgress?.(0.08, 'Connecting to direct stream resolver...');
+      try {
+        const directResult = await streamExtractorService.extractYouTubeAudio(
+          url,
+          preferredFormat,
+          onProgress,
+        );
+        if (directResult) {
+          logger.download(`Direct extraction succeeded via ${directResult.source} (${Math.round(directResult.bitrate / 1000)}kbps ${directResult.codec})`);
+          onProgress?.(0.35, 'Direct stream ready, starting download...');
+          return {
+            streamUrl: directResult.streamUrl,
+            finalExtension: directResult.finalExtension,
+          };
+        }
+      } catch (directErr) {
+        logger.download(`Direct extraction error: ${directErr}`);
+      }
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // TIER 2: loader.to Converter (server-side transcoding)
+    // Supports all formats: M4A, MP3, FLAC, WAV
+    // ──────────────────────────────────────────────────────────────────
+    onProgress?.(0.12, 'Connecting to audio converter...');
     try {
       const initUrl = `https://loader.to/ajax/download.php?button=1&start=1&end=1&format=${formatParam}&url=${encodeURIComponent(url)}`;
       const initRes = await this.fetchWithTimeout(initUrl, {
@@ -267,7 +322,7 @@ class DownloaderService {
         if (initData.progress_url) {
           // Poll progress for audio conversion (up to 45 seconds for full audio encoding)
           for (let attempt = 0; attempt < 45; attempt++) {
-            const stepPct = 0.08 + Math.min(0.25, ((attempt + 1) / 45) * 0.25);
+            const stepPct = 0.12 + Math.min(0.20, ((attempt + 1) / 45) * 0.20);
             onProgress?.(stepPct, 'Converting audio to high-fidelity format...');
             await new Promise(r => setTimeout(r, 1000));
             try {
@@ -295,11 +350,14 @@ class DownloaderService {
         }
       }
     } catch (primaryErr) {
-      console.warn('Primary audio stream extraction error, trying fallbacks:', primaryErr);
+      logger.download(`loader.to error, trying cobalt fallbacks: ${primaryErr}`);
     }
 
-    // 2. Secondary: Cobalt instances fallback
-    onProgress?.(0.20, 'Trying backup stream resolver...');
+    // ──────────────────────────────────────────────────────────────────
+    // TIER 3: Cobalt API Instances (multi-platform fallback)
+    // Handles YouTube, SoundCloud, Instagram, TikTok, Twitter, etc.
+    // ──────────────────────────────────────────────────────────────────
+    onProgress?.(0.22, 'Trying backup stream resolver...');
     const settings = await storageService.getSettings();
     const instancesToTry = [
       settings.cobaltApiUrl,

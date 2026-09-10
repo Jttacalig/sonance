@@ -12,6 +12,48 @@ export const DEFAULT_COBALT_INSTANCES = [
   'https://cobalt.pervert.icu',
 ];
 
+/**
+ * Piped API instances — direct YouTube stream extraction (no proxy middleman)
+ * Returns audioStreams[] with direct Google CDN URLs proxied through pipedproxy
+ * Instance list: https://piped-instances.kavin.rocks/
+ */
+export const PIPED_INSTANCES = [
+  'https://pipedapi.kavin.rocks',
+  'https://pipedapi.adminforge.de',
+  'https://api.piped.yt',
+  'https://pipedapi.r4fo.com',
+  'https://pipedapi.smnz.de',
+  'https://piped-api.garudalinux.org',
+];
+
+/**
+ * Invidious API instances — fallback YouTube stream extraction
+ * Returns adaptiveFormats[] — MUST use ?local=true to avoid IP-bound 403 errors
+ * Instance list: https://api.invidious.io/instances.json
+ */
+export const INVIDIOUS_INSTANCES = [
+  'https://inv.tux.pizza',
+  'https://invidious.fdn.fr',
+  'https://invidious.private.coffee',
+  'https://invidious.protokolla.fi',
+  'https://yewtu.be',
+];
+
+/**
+ * Supported platform URL patterns for multi-platform download detection
+ */
+export const PLATFORM_PATTERNS: { name: string; icon: string; pattern: RegExp }[] = [
+  { name: 'YouTube', icon: '🎬', pattern: /(?:youtube\.com|youtu\.be)/i },
+  { name: 'SoundCloud', icon: '🔊', pattern: /soundcloud\.com/i },
+  { name: 'Instagram', icon: '📸', pattern: /instagram\.com/i },
+  { name: 'TikTok', icon: '🎵', pattern: /tiktok\.com/i },
+  { name: 'Twitter', icon: '🐦', pattern: /(?:twitter\.com|x\.com)/i },
+  { name: 'Facebook', icon: '📘', pattern: /(?:facebook\.com|fb\.watch)/i },
+  { name: 'Spotify', icon: '💚', pattern: /(?:open\.spotify\.com)/i },
+  { name: 'Reddit', icon: '🟠', pattern: /reddit\.com/i },
+  { name: 'Twitch', icon: '💜', pattern: /(?:twitch\.tv|clips\.twitch\.tv)/i },
+];
+
 export type AudioFormat = 'm4a' | 'mp3' | 'flac' | 'opus' | 'wav';
 
 export interface AudioFormatOption {

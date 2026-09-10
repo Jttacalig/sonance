@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,11 +12,13 @@ import {
   Platform,
   Keyboard,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useDownloads } from '../context/DownloadContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
@@ -29,7 +31,7 @@ import { AudioFormatModal } from '../components/AudioFormatModal';
 import { StoragePermissionModal } from '../components/StoragePermissionModal';
 import { MusicVideoModal } from '../components/MusicVideoModal';
 import { SPACING, RADIUS } from '../constants/theme';
-import { QUICK_SEARCH_CHIPS, AudioFormat } from '../constants/endpoints';
+import { QUICK_SEARCH_CHIPS, AudioFormat, PLATFORM_PATTERNS } from '../constants/endpoints';
 
 export const DownloaderScreen: React.FC = () => {
   const {
@@ -69,6 +71,54 @@ export const DownloaderScreen: React.FC = () => {
   const [isStoragePermissionModalVisible, setIsStoragePermissionModalVisible] = useState(false);
   const [pendingDownload, setPendingDownload] = useState<{ info: ExtractedInfo; format: AudioFormat } | null>(null);
 
+  // Clipboard detection state
+  const [detectedClipboardUrl, setDetectedClipboardUrl] = useState<string | null>(null);
+  const [detectedPlatform, setDetectedPlatform] = useState<{ name: string; icon: string } | null>(null);
+  const [isClipboardBannerVisible, setIsClipboardBannerVisible] = useState(false);
+
+  useEffect(() => {
+    checkClipboard();
+  }, []);
+
+  const checkClipboard = async () => {
+    try {
+      const hasString = await Clipboard.hasStringAsync();
+      if (hasString) {
+        const content = await Clipboard.getStringAsync();
+        if (content) {
+          const trimmed = content.trim();
+          if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+            // Check if it's a supported platform
+            const platform = PLATFORM_PATTERNS.find(p => p.pattern.test(trimmed));
+            if (platform) {
+              setDetectedClipboardUrl(trimmed);
+              setDetectedPlatform(platform);
+              setIsClipboardBannerVisible(true);
+            } else if (trimmed.match(/\.(mp3|m4a|wav|flac|ogg)$/i)) {
+              setDetectedClipboardUrl(trimmed);
+              setDetectedPlatform({ name: 'Direct Audio', icon: '🎵' });
+              setIsClipboardBannerVisible(true);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.log('Clipboard access error:', e);
+    }
+  };
+
+  const handleUseClipboardUrl = () => {
+    if (detectedClipboardUrl) {
+      setSearchQuery(detectedClipboardUrl);
+      setIsClipboardBannerVisible(false);
+      // Wait a bit for the state to update, then search or show format modal
+      setTimeout(() => {
+         // Auto-trigger search or URL parsing
+         handleSearch(detectedClipboardUrl);
+      }, 100);
+    }
+  };
+
   const handleSearch = async (queryToSearch?: string) => {
     const q = (queryToSearch !== undefined ? queryToSearch : searchQuery).trim();
     if (!q) return;
@@ -80,8 +130,30 @@ export const DownloaderScreen: React.FC = () => {
     setSelectedItemIds([]);
 
     try {
-      const results = await youtubeSearchService.search(q);
-      setSearchResults(results);
+      // Check if it's a supported platform URL or direct audio URL
+      const isUrl = q.startsWith('http://') || q.startsWith('https://');
+      const platform = isUrl ? PLATFORM_PATTERNS.find(p => p.pattern.test(q)) : null;
+      const isDirectAudio = isUrl && q.match(/\.(mp3|m4a|wav|flac|ogg)$/i);
+      
+      // If it's a YouTube URL, let the youtubeSearchService handle it (it works well for YT URLs)
+      // If it's another platform or direct audio, create a mock result card
+      if (isUrl && (platform?.name !== 'YouTube') || isDirectAudio) {
+        const mockResult: SearchResultItem = {
+          id: 'url_' + Date.now().toString(),
+          title: platform ? `Download from ${platform.name}` : 'Direct Audio Download',
+          artist: 'External Source',
+          duration: 'Unknown',
+          durationSec: 0,
+          thumbnailUrl: 'https://via.placeholder.com/300x300.png?text=Link',
+          sourceUrl: q,
+          compatibilityType: 'standard',
+          badgeLabel: platform?.name || 'Direct Link',
+        };
+        setSearchResults([mockResult]);
+      } else {
+        const results = await youtubeSearchService.search(q);
+        setSearchResults(results);
+      }
     } catch (error: any) {
       Alert.alert('Search Error', error?.message || 'Could not fetch search results.');
     } finally {
@@ -385,6 +457,41 @@ export const DownloaderScreen: React.FC = () => {
             </View>
           </View>
 
+          {/* Clipboard Banner */}
+          {isClipboardBannerVisible && detectedClipboardUrl && detectedPlatform && (
+            <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleUseClipboardUrl}
+                style={[
+                  styles.clipboardBanner,
+                  {
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
+                    borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)'
+                  }
+                ]}
+              >
+                <View style={styles.clipboardBannerContent}>
+                  <Text style={styles.clipboardBannerIcon}>{detectedPlatform.icon}</Text>
+                  <View style={styles.clipboardBannerTextContainer}>
+                    <Text style={[styles.clipboardBannerTitle, { color: colors.textPrimary }]}>
+                      Link detected
+                    </Text>
+                    <Text style={[styles.clipboardBannerSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+                      Download from {detectedPlatform.name}?
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setIsClipboardBannerVisible(false)}
+                  style={styles.clipboardBannerClose}
+                >
+                  <Ionicons name="close" size={20} color={colors.textMuted} />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+
           {/* Search Glass Input Card */}
           <View
             style={[
@@ -415,10 +522,18 @@ export const DownloaderScreen: React.FC = () => {
                   },
                 ]}
               >
-                <Ionicons name="search" size={20} color={isDark ? '#FFFFFF' : colors.primary} />
+                {PLATFORM_PATTERNS.find(p => p.pattern.test(searchQuery)) ? (
+                  <Text style={{ fontSize: 18, marginRight: 4 }}>
+                    {PLATFORM_PATTERNS.find(p => p.pattern.test(searchQuery))?.icon}
+                  </Text>
+                ) : searchQuery.match(/\.(mp3|m4a|wav|flac|ogg)$/i) ? (
+                  <Text style={{ fontSize: 18, marginRight: 4 }}>🎵</Text>
+                ) : (
+                  <Ionicons name="search" size={20} color={isDark ? '#FFFFFF' : colors.primary} />
+                )}
                 <TextInput
                   style={[styles.searchInput, { color: colors.textPrimary }]}
-                  placeholder="Search song, artist, album, or paste URL..."
+                  placeholder="Search songs or paste any link..."
                   placeholderTextColor={colors.textMuted}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
@@ -1325,5 +1440,38 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '800',
+  },
+  clipboardBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    marginBottom: SPACING.md,
+  },
+  clipboardBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  clipboardBannerIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  clipboardBannerTextContainer: {
+    flex: 1,
+  },
+  clipboardBannerTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  clipboardBannerSubtitle: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  clipboardBannerClose: {
+    padding: 4,
   },
 });

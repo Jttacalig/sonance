@@ -1,4 +1,4 @@
-export type SourceType = 'youtube' | 'soundcloud' | 'direct' | 'imported';
+export type SourceType = 'youtube' | 'soundcloud' | 'instagram' | 'tiktok' | 'twitter' | 'facebook' | 'spotify' | 'reddit' | 'twitch' | 'direct' | 'imported';
 
 export interface Track {
   id: string;
