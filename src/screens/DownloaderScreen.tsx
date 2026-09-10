@@ -21,10 +21,12 @@ import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useDownloads } from '../context/DownloadContext';
 import { useLibrary } from '../context/LibraryContext';
+import { usePlayer } from '../context/PlayerContext';
 import { useTheme } from '../context/ThemeContext';
-import { ExtractedInfo } from '../services/downloaderService';
+import { ExtractedInfo, downloaderService } from '../services/downloaderService';
 import { youtubeSearchService, SearchResultItem } from '../services/youtubeSearchService';
 import { storageService } from '../services/storageService';
+import { Track } from '../types/music';
 import { DownloadCard } from '../components/DownloadCard';
 import { LiquidBackground } from '../components/LiquidBackground';
 import { AudioFormatModal } from '../components/AudioFormatModal';
@@ -46,7 +48,10 @@ export const DownloaderScreen: React.FC = () => {
     clearCompleted,
   } = useDownloads();
   const { tracks, refreshLibrary } = useLibrary();
+  const { currentTrack, isPlaying, playTrack, togglePlayPause } = usePlayer();
   const { colors, isDark } = useTheme();
+
+  const [streamingTrackId, setStreamingTrackId] = useState<string | null>(null);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -242,6 +247,69 @@ export const DownloaderScreen: React.FC = () => {
       );
     } catch (err: any) {
       Alert.alert('Bulk Download Error', err?.message || 'Could not queue selected tracks.');
+    }
+  };
+
+  // Play direct audio stream in background using native player
+  const handlePlayOnlineStream = async (item: SearchResultItem) => {
+    const onlineTrackId = `online_${item.id}`;
+
+    // If currently playing/paused this track, toggle play/pause
+    if (currentTrack?.id === onlineTrackId) {
+      if (Haptics.impactAsync) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      }
+      await togglePlayPause();
+      return;
+    }
+
+    if (Haptics.impactAsync) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+
+    setStreamingTrackId(item.id);
+
+    try {
+      const resolved = await downloaderService.resolveAudioStreamUrl(item.sourceUrl, 'm4a');
+      if (!resolved || !resolved.streamUrl) {
+        throw new Error('Could not resolve direct audio stream.');
+      }
+
+      const onlineTrack: Track = {
+        id: onlineTrackId,
+        title: item.title,
+        artist: item.artist,
+        album: 'Online Stream',
+        duration: item.durationSec || 0,
+        uri: resolved.streamUrl,
+        artworkUri: item.thumbnailUrl,
+        sourceUrl: item.sourceUrl,
+        sourceType: 'youtube',
+        dateAdded: Date.now(),
+      };
+
+      const queueTracks: Track[] = searchResults.map(s => ({
+        id: `online_${s.id}`,
+        title: s.title,
+        artist: s.artist,
+        album: 'Online Stream',
+        duration: s.durationSec || 0,
+        uri: s.id === item.id ? resolved.streamUrl : s.sourceUrl,
+        artworkUri: s.thumbnailUrl,
+        sourceUrl: s.sourceUrl,
+        sourceType: 'youtube',
+        dateAdded: Date.now(),
+      }));
+
+      await playTrack(onlineTrack, queueTracks);
+
+      if (Haptics.notificationAsync) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      }
+    } catch (err: any) {
+      Alert.alert('Stream Error', err?.message || 'Failed to stream audio. Please check your network connection.');
+    } finally {
+      setStreamingTrackId(null);
     }
   };
 
@@ -686,6 +754,9 @@ export const DownloaderScreen: React.FC = () => {
                 {searchResults.map((item) => {
                   const isSelected = selectedItemIds.includes(item.id);
                   const itemStatus = getItemStatus(item);
+                  const isThisTrackCurrent = currentTrack?.id === `online_${item.id}`;
+                  const isThisTrackPlaying = isThisTrackCurrent && isPlaying;
+                  const isThisTrackStreaming = streamingTrackId === item.id;
 
                   return (
                     <TouchableOpacity
@@ -694,6 +765,8 @@ export const DownloaderScreen: React.FC = () => {
                       onPress={() => {
                         if (isBulkMode) {
                           handleToggleSelectItem(item.id);
+                        } else {
+                          handlePlayOnlineStream(item);
                         }
                       }}
                       style={[
@@ -701,10 +774,14 @@ export const DownloaderScreen: React.FC = () => {
                         {
                           backgroundColor: isSelected
                             ? (isDark ? 'rgba(99, 102, 241, 0.18)' : 'rgba(99, 102, 241, 0.12)')
+                            : isThisTrackCurrent
+                            ? (isDark ? 'rgba(99, 102, 241, 0.12)' : 'rgba(99, 102, 241, 0.08)')
                             : isDark
                             ? 'rgba(255, 255, 255, 0.05)'
                             : 'rgba(255, 255, 255, 0.65)',
                           borderColor: isSelected
+                            ? colors.primary
+                            : isThisTrackCurrent
                             ? colors.primary
                             : isDark
                             ? 'rgba(255, 255, 255, 0.1)'
@@ -745,7 +822,7 @@ export const DownloaderScreen: React.FC = () => {
                           style={styles.resultThumb}
                         />
                         <View style={styles.thumbPlayOverlay}>
-                          <Ionicons name="play-circle" size={24} color="#FFF" />
+                          <Ionicons name="videocam" size={20} color="#FFF" />
                         </View>
                         {item.duration && (
                           <View style={styles.resultDurationBadge}>
@@ -757,11 +834,14 @@ export const DownloaderScreen: React.FC = () => {
                       {/* Title, Artist, & Badges */}
                       <TouchableOpacity
                         activeOpacity={0.7}
-                        onPress={() => (isBulkMode ? handleToggleSelectItem(item.id) : handleOpenStreamPreview(item))}
+                        onPress={() => (isBulkMode ? handleToggleSelectItem(item.id) : handlePlayOnlineStream(item))}
                         style={styles.resultInfo}
                       >
                         <Text
-                          style={[styles.resultTitle, { color: colors.textPrimary }]}
+                          style={[
+                            styles.resultTitle,
+                            { color: isThisTrackCurrent ? colors.primary : colors.textPrimary },
+                          ]}
                           numberOfLines={1}
                         >
                           {item.title}
@@ -790,20 +870,32 @@ export const DownloaderScreen: React.FC = () => {
                         <View style={styles.resultActions}>
                           <TouchableOpacity
                             activeOpacity={0.8}
-                            onPress={() => handleOpenStreamPreview(item)}
+                            onPress={() => handlePlayOnlineStream(item)}
+                            disabled={isThisTrackStreaming}
                             style={[
                               styles.playPreviewBtn,
-                              {
-                                backgroundColor: isDark
-                                  ? 'rgba(255, 255, 255, 0.08)'
-                                  : 'rgba(235, 240, 248, 0.9)',
-                                borderColor: isDark
-                                  ? 'rgba(255, 255, 255, 0.16)'
-                                  : 'rgba(200, 212, 228, 0.6)',
-                              },
+                              isThisTrackCurrent
+                                ? {
+                                    backgroundColor: colors.primary,
+                                    borderColor: colors.primary,
+                                  }
+                                : {
+                                    backgroundColor: isDark
+                                      ? 'rgba(255, 255, 255, 0.08)'
+                                      : 'rgba(235, 240, 248, 0.9)',
+                                    borderColor: isDark
+                                      ? 'rgba(255, 255, 255, 0.16)'
+                                      : 'rgba(200, 212, 228, 0.6)',
+                                  },
                             ]}
                           >
-                            <Ionicons name="play" size={12} color={colors.primary} />
+                            {isThisTrackStreaming ? (
+                              <ActivityIndicator size="small" color={isThisTrackCurrent ? '#FFFFFF' : colors.primary} />
+                            ) : isThisTrackPlaying ? (
+                              <Ionicons name="pause" size={13} color={isThisTrackCurrent ? '#FFFFFF' : colors.primary} />
+                            ) : (
+                              <Ionicons name="play" size={13} color={isThisTrackCurrent ? '#FFFFFF' : colors.primary} />
+                            )}
                           </TouchableOpacity>
 
                           {/* Download / Status Badge Button */}

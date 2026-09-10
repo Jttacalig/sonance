@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -16,9 +16,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import * as Haptics from 'expo-haptics';
+import { Alert } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { ExtractedInfo } from '../services/downloaderService';
+import { usePlayer } from '../context/PlayerContext';
+import { ExtractedInfo, downloaderService } from '../services/downloaderService';
 import { storageService } from '../services/storageService';
+import { Track } from '../types/music';
 import { SPACING, RADIUS } from '../constants/theme';
 
 interface MusicVideoModalProps {
@@ -128,6 +131,52 @@ export const MusicVideoModal: React.FC<MusicVideoModalProps> = ({
     })();
     true;
   `;
+
+  const [isStreamingAudio, setIsStreamingAudio] = useState(false);
+  const { currentTrack, isPlaying, playTrack, togglePlayPause } = usePlayer();
+
+  const handlePlayBackgroundAudio = async () => {
+    if (!item) return;
+
+    if (Haptics.impactAsync) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    }
+
+    const onlineTrackId = `online_${item.id}`;
+    if (currentTrack?.id === onlineTrackId) {
+      await togglePlayPause();
+      onClose();
+      return;
+    }
+
+    try {
+      setIsStreamingAudio(true);
+      const resolved = await downloaderService.resolveAudioStreamUrl(item.sourceUrl, 'm4a');
+      if (!resolved || !resolved.streamUrl) {
+        throw new Error('Could not resolve audio stream.');
+      }
+
+      const onlineTrack: Track = {
+        id: onlineTrackId,
+        title: item.title,
+        artist: item.artist,
+        album: 'Online Stream',
+        duration: item.durationSec || 0,
+        uri: resolved.streamUrl,
+        artworkUri: item.thumbnailUrl,
+        sourceUrl: item.sourceUrl,
+        sourceType: 'youtube',
+        dateAdded: Date.now(),
+      };
+
+      await playTrack(onlineTrack);
+      onClose();
+    } catch (err: any) {
+      Alert.alert('Stream Error', err?.message || 'Could not start background audio stream.');
+    } finally {
+      setIsStreamingAudio(false);
+    }
+  };
 
   const handleSave = async () => {
     if (Haptics.impactAsync) {
@@ -252,6 +301,8 @@ export const MusicVideoModal: React.FC<MusicVideoModalProps> = ({
                   injectedJavaScript={injectedCleanCSS}
                   style={styles.webView}
                   allowsInlineMediaPlayback={true}
+                  allowsPictureInPictureMediaPlayback={true}
+                  allowsAirPlayForMediaPlayback={true}
                   mediaPlaybackRequiresUserAction={false}
                   allowsFullscreenVideo={true}
                   javaScriptEnabled={true}
@@ -360,55 +411,83 @@ export const MusicVideoModal: React.FC<MusicVideoModalProps> = ({
                   </View>
                 </View>
 
-                {/* Action Buttons Row */}
-                <View style={styles.buttonsRow}>
-                  {/* Primary Download Offline Button */}
+                {/* Action Buttons */}
+                <View style={{ gap: SPACING.sm, marginTop: 2 }}>
+                  {/* Primary Background Audio Stream Button */}
                   <TouchableOpacity
                     activeOpacity={0.85}
-                    onPress={handleSave}
-                    style={styles.saveButtonWrapper}
+                    onPress={handlePlayBackgroundAudio}
+                    disabled={isStreamingAudio}
+                    style={styles.bgStreamButtonWrapper}
                   >
-                    <View
+                    <LinearGradient
+                      colors={['#6366F1', '#4F46E5']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.bgStreamGradientBtn}
+                    >
+                      {isStreamingAudio ? (
+                        <ActivityIndicator size="small" color="#FFF" />
+                      ) : (
+                        <>
+                          <Ionicons name="headset" size={19} color="#FFF" />
+                          <Text style={styles.bgStreamButtonText}>
+                            Listen in Background (Audio)
+                          </Text>
+                        </>
+                      )}
+                    </LinearGradient>
+                  </TouchableOpacity>
+
+                  <View style={styles.buttonsRow}>
+                    {/* Secondary Download Offline Button */}
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={handleSave}
+                      style={styles.saveButtonWrapper}
+                    >
+                      <View
+                        style={[
+                          styles.saveGradientBtn,
+                          {
+                            backgroundColor: isDark ? '#FFFFFF' : colors.primary,
+                            shadowColor: isDark ? '#FFFFFF' : colors.primary,
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name="cloud-download-outline"
+                          size={18}
+                          color={isDark ? '#070A10' : '#FFF'}
+                        />
+                        <Text
+                          style={[
+                            styles.saveButtonText,
+                            { color: isDark ? '#070A10' : '#FFF' },
+                          ]}
+                        >
+                          Download
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    {/* Close Button */}
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={handleClose}
                       style={[
-                        styles.saveGradientBtn,
+                        styles.secondaryBtn,
                         {
-                          backgroundColor: isDark ? '#FFFFFF' : colors.primary,
-                          shadowColor: isDark ? '#FFFFFF' : colors.primary,
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                          borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.12)',
                         },
                       ]}
                     >
-                      <Ionicons
-                        name="cloud-download-outline"
-                        size={20}
-                        color={isDark ? '#070A10' : '#FFF'}
-                      />
-                      <Text
-                        style={[
-                          styles.saveButtonText,
-                          { color: isDark ? '#070A10' : '#FFF' },
-                        ]}
-                      >
-                        Download Offline
+                      <Text style={[styles.secondaryBtnText, { color: colors.textPrimary }]}>
+                        Close
                       </Text>
-                    </View>
-                  </TouchableOpacity>
-
-                  {/* Secondary Done Button */}
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={handleClose}
-                    style={[
-                      styles.secondaryBtn,
-                      {
-                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
-                        borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.12)',
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.secondaryBtnText, { color: colors.textPrimary }]}>
-                      Done
-                    </Text>
-                  </TouchableOpacity>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </BlurView>
             </View>
@@ -613,6 +692,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  bgStreamButtonWrapper: {
+    width: '100%',
+    borderRadius: RADIUS.full,
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  bgStreamGradientBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 50,
+    borderRadius: RADIUS.full,
+    gap: 8,
+  },
+  bgStreamButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   secondaryBtnText: {
     fontSize: 14,

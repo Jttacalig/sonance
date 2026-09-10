@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { Track, RepeatMode } from '../types/music';
 import * as FileSystem from 'expo-file-system/legacy';
 import { storageService, MUSIC_DIR, ARTWORK_DIR } from '../services/storageService';
+import { downloaderService } from '../services/downloaderService';
 
 interface PlayerContextType {
   currentTrack: Track | null;
@@ -238,7 +239,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return;
       }
 
-      // 3. Resolve and verify file URI on disk
+      // 3. Resolve and verify file URI on disk or online stream
       let uriToPlay = track.uri;
       let verifiedArtworkUri = track.artworkUri;
 
@@ -264,6 +265,25 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
         if (uriToPlay.includes(' ')) {
           uriToPlay = encodeURI(uriToPlay);
+        }
+      } else if (uriToPlay.startsWith('http://') || uriToPlay.startsWith('https://')) {
+        // Online stream URI
+        const isDirectAudioStream =
+          uriToPlay.includes('.googlevideo.com') ||
+          uriToPlay.includes('pipedproxy') ||
+          uriToPlay.includes('invidious') ||
+          uriToPlay.match(/\.(mp3|m4a|wav|flac|aac|ogg)(\?|$)/i);
+
+        // If it's a web page URL (e.g. YouTube video URL in a queue), resolve stream URL
+        if (!isDirectAudioStream && (uriToPlay.includes('youtube.com') || uriToPlay.includes('youtu.be') || track.sourceUrl)) {
+          try {
+            const resolved = await downloaderService.resolveAudioStreamUrl(track.sourceUrl || uriToPlay, 'm4a');
+            if (resolved && resolved.streamUrl) {
+              uriToPlay = resolved.streamUrl;
+            }
+          } catch (resErr) {
+            console.warn('Online stream resolution error in PlayerContext:', resErr);
+          }
         }
       }
 
