@@ -15,17 +15,6 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  FadeIn,
-  FadeOut,
-  SlideInRight,
-  SlideOutRight,
-  Easing,
-} from 'react-native-reanimated';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { CustomizationProvider } from './src/context/CustomizationContext';
 import { LibraryProvider } from './src/context/LibraryContext';
@@ -84,9 +73,6 @@ function MainNavigator() {
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
   const [barWidth, setBarWidth] = useState<number>(0);
 
-  const activeIndex = useSharedValue<number>(0);
-  const pillScale = useSharedValue<number>(1);
-
   // Android hardware back button handler
   useEffect(() => {
     const onBackPress = () => {
@@ -118,16 +104,6 @@ function MainNavigator() {
     }
 
     setActiveTab(tab);
-    activeIndex.value = withSpring(index, {
-      damping: 18,
-      stiffness: 220,
-      mass: 0.7,
-    });
-
-    // Micro bounce effect on tap
-    pillScale.value = withTiming(0.92, { duration: 80 }, () => {
-      pillScale.value = withSpring(1.0, { damping: 14, stiffness: 200 });
-    });
   };
 
   const handleBarLayout = (e: LayoutChangeEvent) => {
@@ -141,89 +117,56 @@ function MainNavigator() {
   const availableWidth = Math.max(0, barWidth - horizontalPadding * 2);
   const tabItemWidth = availableWidth > 0 ? availableWidth / TABS.length : 0;
 
-  const indicatorAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { translateX: activeIndex.value * tabItemWidth },
-        { scale: pillScale.value },
-      ],
-      width: tabItemWidth > 0 ? tabItemWidth : '25%',
-    };
-  });
+  const activeTabIndex = TABS.findIndex(tab => tab.id === activeTab);
+  const indicatorStyle = {
+    transform: [{ translateX: activeTabIndex * tabItemWidth }],
+    width: tabItemWidth > 0 ? tabItemWidth : '25%',
+  } as const;
 
   const renderScreenContent = () => {
     if (selectedPlaylist && activeTab === 'playlists') {
       return (
-        <Animated.View
-          key="playlist-detail"
-          entering={SlideInRight.duration(280).easing(Easing.out(Easing.cubic))}
-          exiting={SlideOutRight.duration(200)}
-          style={styles.screenContainer}
-        >
+        <View key="playlist-detail" style={styles.screenContainer}>
           <PlaylistDetailScreen
             playlist={selectedPlaylist}
             onBack={() => setSelectedPlaylist(null)}
           />
-        </Animated.View>
+        </View>
       );
     }
 
     switch (activeTab) {
       case 'library':
         return (
-          <Animated.View
-            key="screen-library"
-            entering={FadeIn.duration(240).easing(Easing.out(Easing.cubic))}
-            exiting={FadeOut.duration(150)}
-            style={styles.screenContainer}
-          >
+          <View key="screen-library" style={styles.screenContainer}>
             <LibraryScreen onNavigateToDownloader={() => handleTabPress('downloader', 1)} />
-          </Animated.View>
+          </View>
         );
       case 'downloader':
         return (
-          <Animated.View
-            key="screen-downloader"
-            entering={FadeIn.duration(240).easing(Easing.out(Easing.cubic))}
-            exiting={FadeOut.duration(150)}
-            style={styles.screenContainer}
-          >
+          <View key="screen-downloader" style={styles.screenContainer}>
             <DownloaderScreen />
-          </Animated.View>
+          </View>
         );
       case 'playlists':
         return (
-          <Animated.View
-            key="screen-playlists"
-            entering={FadeIn.duration(240).easing(Easing.out(Easing.cubic))}
-            exiting={FadeOut.duration(150)}
-            style={styles.screenContainer}
-          >
+          <View key="screen-playlists" style={styles.screenContainer}>
             <PlaylistsScreen
               onSelectPlaylist={(pl) => setSelectedPlaylist(pl)}
             />
-          </Animated.View>
+          </View>
         );
       case 'settings':
         return (
-          <Animated.View
-            key="screen-settings"
-            entering={FadeIn.duration(240).easing(Easing.out(Easing.cubic))}
-            exiting={FadeOut.duration(150)}
-            style={styles.screenContainer}
-          >
+          <View key="screen-settings" style={styles.screenContainer}>
             <SettingsScreen />
-          </Animated.View>
+          </View>
         );
       default:
         return (
-          <Animated.View
-            key="screen-default"
-            entering={FadeIn.duration(240)}
-            style={styles.screenContainer}
-          >
+          <View key="screen-default" style={styles.screenContainer}>
             <LibraryScreen />
-          </Animated.View>
+          </View>
         );
     }
   };
@@ -246,7 +189,7 @@ function MainNavigator() {
       {/* iOS 26 Dynamic Liquid Headphone HUD */}
       <HeadphoneHud />
 
-      {/* Screen Content with Smooth Page Transitions */}
+      {/* Screen content avoids layout worklets on iOS. */}
       <View style={styles.contentContainer}>{renderScreenContent()}</View>
 
       {/* Global Eye-Comfort Frosted Glass Theme Transition Veil */}
@@ -306,10 +249,10 @@ function MainNavigator() {
           <View style={styles.pillTabBar} onLayout={handleBarLayout}>
             {/* Smooth Gliding Crystal Frosted Lens Pill */}
             {tabItemWidth > 0 && (
-              <Animated.View
+              <View
                 style={[
                   styles.activeIndicatorPill,
-                  indicatorAnimatedStyle,
+                  indicatorStyle,
                   {
                     borderColor: isDark
                       ? 'rgba(255, 255, 255, 0.45)'
@@ -328,7 +271,7 @@ function MainNavigator() {
                   end={{ x: 1, y: 1 }}
                   style={StyleSheet.absoluteFill}
                 />
-              </Animated.View>
+              </View>
             )}
 
             {/* Tab Items */}

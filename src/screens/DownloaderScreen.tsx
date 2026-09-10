@@ -18,7 +18,6 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useDownloads } from '../context/DownloadContext';
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
@@ -531,7 +530,7 @@ export const DownloaderScreen: React.FC = () => {
 
           {/* Clipboard Banner */}
           {isClipboardBannerVisible && detectedClipboardUrl && detectedPlatform && (
-            <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)}>
+            <View>
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={handleUseClipboardUrl}
@@ -561,7 +560,7 @@ export const DownloaderScreen: React.FC = () => {
                   <Ionicons name="close" size={20} color={colors.textMuted} />
                 </TouchableOpacity>
               </TouchableOpacity>
-            </Animated.View>
+            </View>
           )}
 
           {/* Search Glass Input Card */}

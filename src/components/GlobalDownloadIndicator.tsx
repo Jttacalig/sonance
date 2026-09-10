@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -10,17 +10,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
-  withRepeat,
-  withSequence,
-  FadeInUp,
-  FadeOutUp,
-  Easing,
-} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useDownloads } from '../context/DownloadContext';
 import { useTheme } from '../context/ThemeContext';
@@ -30,29 +19,6 @@ export const GlobalDownloadIndicator: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { activeCount, activeDownload, openDownloadsModal } = useDownloads();
   const { colors, isDark } = useTheme();
-
-  const pulseOpacity = useSharedValue(1);
-
-  useEffect(() => {
-    if (activeCount > 0) {
-      pulseOpacity.value = withRepeat(
-        withSequence(
-          withTiming(0.4, { duration: 800, easing: Easing.inOut(Easing.ease) }),
-          withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) })
-        ),
-        -1,
-        true
-      );
-    } else {
-      pulseOpacity.value = 1;
-    }
-  }, [activeCount]);
-
-  const pulseStyle = useAnimatedStyle(() => {
-    return {
-      opacity: pulseOpacity.value,
-    };
-  });
 
   if (activeCount === 0 || !activeDownload) {
     return null;
@@ -68,9 +34,7 @@ export const GlobalDownloadIndicator: React.FC = () => {
   const currentProgressPct = Math.max(5, Math.round(activeDownload.progress * 100));
 
   return (
-    <Animated.View
-      entering={FadeInUp.duration(320).easing(Easing.out(Easing.cubic))}
-      exiting={FadeOutUp.duration(220)}
+    <View
       style={[
         styles.container,
         {
@@ -108,11 +72,9 @@ export const GlobalDownloadIndicator: React.FC = () => {
           />
 
           <View style={styles.pillContent}>
-            {/* Animated Download Pulse Icon */}
-            <Animated.View
+            <View
               style={[
                 styles.iconBadge,
-                pulseStyle,
                 {
                   backgroundColor: isDark
                     ? 'rgba(255, 255, 255, 0.16)'
@@ -125,7 +87,7 @@ export const GlobalDownloadIndicator: React.FC = () => {
                 size={13}
                 color={isDark ? '#FFFFFF' : '#FFFFFF'}
               />
-            </Animated.View>
+            </View>
 
             {/* Song title & active count */}
             <View style={styles.textColumn}>
@@ -174,7 +136,7 @@ export const GlobalDownloadIndicator: React.FC = () => {
           </View>
         </BlurView>
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 };
 
