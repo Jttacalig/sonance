@@ -53,7 +53,14 @@
       "expo-sqlite",
       "expo-image",
       "expo-sharing",
-      "expo-audio",
+      [
+        "expo-audio",
+        {
+          "enableBackgroundPlayback": true,
+          "enableBackgroundRecording": false,
+          "recordAudioAndroid": false
+        }
+      ],
       [
         "expo-document-picker",
         {

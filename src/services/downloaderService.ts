@@ -1,5 +1,4 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import { createAudioPlayer } from 'expo-audio';
 import { DownloadItem, DownloadStatus, SourceType, Track } from '../types/music';
 import { storageService, MUSIC_DIR, ARTWORK_DIR } from './storageService';
 import { DEFAULT_COBALT_INSTANCES, AudioFormat, DEFAULT_USER_AGENT } from '../constants/endpoints';
@@ -485,38 +484,26 @@ class DownloaderService {
         } catch {}
       }
 
-      // M4A / MP4 / AAC container: bytes 4-7 = "ftyp"
-      if (bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) {
-        return true;
-      }
-
-      // MP3 with ID3 tag: bytes 0-2 = "ID3"
-      if (bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) {
-        return true;
-      }
-
-      // MP3 frame sync without ID3: 0xFF 0xFB, 0xFF 0xF3, 0xFF 0xF2, 0xFF 0xE2
-      if (bytes[0] === 0xFF && (bytes[1] === 0xFB || bytes[1] === 0xF3 || bytes[1] === 0xF2 || bytes[1] === 0xE2)) {
-        return true;
-      }
-
-      // FLAC: bytes 0-3 = "fLaC"
-      if (bytes[0] === 0x66 && bytes[1] === 0x4C && bytes[2] === 0x61 && bytes[3] === 0x43) {
-        return true;
-      }
-
-      // WAV: bytes 0-3 = "RIFF" and bytes 8-11 = "WAVE"
-      if (
+      const isMp4 = bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70;
+      const isMp3 =
+        (bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) ||
+        (bytes[0] === 0xFF && (bytes[1] === 0xFB || bytes[1] === 0xF3 || bytes[1] === 0xF2 || bytes[1] === 0xE2));
+      const isFlac = bytes[0] === 0x66 && bytes[1] === 0x4C && bytes[2] === 0x61 && bytes[3] === 0x43;
+      const isWav =
         bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
-        bytes[8] === 0x57 && bytes[9] === 0x41 && bytes[10] === 0x56 && bytes[11] === 0x45
-      ) {
-        return true;
-      }
+        bytes[8] === 0x57 && bytes[9] === 0x41 && bytes[10] === 0x56 && bytes[11] === 0x45;
 
-      // OGG: bytes 0-3 = "OggS"
-      if (bytes[0] === 0x4F && bytes[1] === 0x67 && bytes[2] === 0x67 && bytes[3] === 0x53) {
-        return true;
-      }
+      // The file extension is part of the playback contract. In particular,
+      // accepting Ogg/WebM here for an .m4a destination creates files that
+      // Android may tolerate but iOS cannot play.
+      const ext = expectedExt.toLowerCase();
+      const matchesExpectedContainer =
+        ((ext === 'm4a' || ext === 'mp4') && isMp4) ||
+        (ext === 'mp3' && isMp3) ||
+        (ext === 'flac' && isFlac) ||
+        (ext === 'wav' && isWav);
+
+      if (matchesExpectedContainer) return true;
 
       logger.download(`Audio validation failed: unrecognized header bytes [${Array.from(bytes.slice(0, 8)).map(b => '0x' + b.toString(16).toUpperCase().padStart(2, '0')).join(', ')}]`);
       return false;
@@ -572,8 +559,8 @@ class DownloaderService {
         .replace(/_+/g, '_')
         .substring(0, 40);
 
-      const fileExt = finalExtension || 'm4a';
-      const destinationFile = `${MUSIC_DIR}${trackId}_${safeSlug}.${fileExt}`;
+      let fileExt = finalExtension || 'm4a';
+      let destinationFile = `${MUSIC_DIR}${trackId}_${safeSlug}.${fileExt}`;
 
       // 3. Download audio file with live byte & percentage tracking
       onStatusChange('downloading', `Downloading high-fidelity ${fileExt.toUpperCase()} audio...`);
@@ -650,6 +637,13 @@ class DownloaderService {
         }
 
         if (fallbackStream) {
+          // A fallback can legitimately resolve to a different format. Keep
+          // the filename in sync with it so validation and native playback do
+          // not treat one container as another.
+          if (fallbackStream.finalExtension !== fileExt) {
+            fileExt = fallbackStream.finalExtension;
+            destinationFile = `${MUSIC_DIR}${trackId}_${safeSlug}.${fileExt}`;
+          }
           const fallbackResumable = FileSystem.createDownloadResumable(
             fallbackStream.streamUrl,
             destinationFile,
@@ -704,19 +698,11 @@ class DownloaderService {
         }
       }
 
-      // 5. Measure and probe audio duration
+      // 5. Use the source duration when available. Creating an extra native
+      // player solely to probe a newly-downloaded file races the real player
+      // on iOS and does not reliably provide a duration before it has loaded.
       let duration = downloadItem.duration || 180;
       let fileSize = (fileInfo.exists ? fileInfo.size : 0) || lastBytesWritten || 0;
-
-      try {
-        const probePlayer = createAudioPlayer(destinationFile);
-        if (probePlayer.duration && probePlayer.duration > 0) {
-          duration = Math.round(probePlayer.duration);
-        }
-        probePlayer.remove();
-      } catch (probeErr) {
-        console.warn('Probe error on downloaded track:', probeErr);
-      }
 
       // 6. Create Track
       const track: Track = {
@@ -729,6 +715,7 @@ class DownloaderService {
         sourceUrl: downloadItem.url,
         sourceType: this.detectSourceType(downloadItem.url),
         fileSize,
+        format: fileExt,
         dateAdded: Date.now(),
         isFavorite: false,
         playCount: 0,

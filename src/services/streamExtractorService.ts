@@ -58,7 +58,7 @@ interface InvidiousResponse {
  * 1. Piped API (6 instances) → audioStreams[] with proxied CDN URLs
  * 2. Invidious API (5 instances, ?local=true) → adaptiveFormats[] with proxied URLs
  * 
- * For non-M4A formats (MP3/FLAC/WAV), returns null — caller should fall back
+ * For non-M4A formats (MP3/FLAC/WAV/Opus), returns null — caller should fall back
  * to cobalt/loader.to which handle server-side transcoding.
  */
 class StreamExtractorService {
@@ -131,9 +131,14 @@ class StreamExtractorService {
           continue;
         }
 
-        // Pick best M4A/AAC stream (prefer itag 140 = 128kbps AAC, then itag 139 = 48kbps)
+        // Only return a real MP4/AAC stream. A WebM/Opus stream renamed to
+        // .m4a has the expected size, but iOS cannot decode it.
         const m4aStreams = data.audioStreams
-          .filter(s => !s.videoOnly && (s.mimeType?.startsWith('audio/mp4') || s.format === 'M4A'))
+          .filter(s =>
+            !s.videoOnly &&
+            (s.mimeType?.startsWith('audio/mp4') || s.format === 'M4A') &&
+            (!s.codec || /mp4a|aac/i.test(s.codec))
+          )
           .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
 
         if (m4aStreams.length > 0) {
@@ -152,29 +157,7 @@ class StreamExtractorService {
           }
         }
 
-        // Fallback: any audio stream
-        const anyAudio = data.audioStreams
-          .filter(s => !s.videoOnly)
-          .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
-
-        if (anyAudio.length > 0) {
-          const best = anyAudio[0];
-          const streamUrl = this.toAbsoluteUrl(best.url, cleanBase);
-          if (streamUrl) {
-            const ext = best.mimeType?.includes('webm') ? 'webm' : 'm4a';
-            logger.download(`[Piped] ✓ Found ${best.quality} ${best.codec} (fallback) via ${instance}`);
-            return {
-              streamUrl,
-              bitrate: best.bitrate || 128000,
-              codec: best.codec || 'opus',
-              contentLength: best.contentLength || 0,
-              finalExtension: ext === 'webm' ? 'm4a' : ext, // Save as m4a for iOS compatibility
-              source: 'piped',
-            };
-          }
-        }
-
-        logger.download(`[Piped] ${instance} had streams but none matched audio criteria`);
+        logger.download(`[Piped] ${instance} had no iOS-compatible MP4/AAC stream`);
       } catch (err: any) {
         logger.download(`[Piped] ${instance} error: ${err?.message || err}`);
         continue;
@@ -222,9 +205,13 @@ class StreamExtractorService {
           continue;
         }
 
-        // Prefer M4A/AAC (container: mp4, encoding: aac)
+        // Only accept MP4/AAC. Do not return an Opus/WebM fallback with a
+        // misleading .m4a extension: AVFoundation will reject it on iOS.
         const m4aFormats = audioFormats
-          .filter(f => f.container === 'mp4' || f.encoding === 'aac' || f.type?.includes('audio/mp4'))
+          .filter(f =>
+            (f.container === 'mp4' || f.type?.includes('audio/mp4')) &&
+            (!f.encoding || /aac|mp4a/i.test(f.encoding))
+          )
           .sort((a, b) => (parseInt(b.bitrate) || 0) - (parseInt(a.bitrate) || 0));
 
         if (m4aFormats.length > 0) {
@@ -243,23 +230,7 @@ class StreamExtractorService {
           }
         }
 
-        // Fallback: any audio stream
-        const bestAudio = audioFormats.sort(
-          (a, b) => (parseInt(b.bitrate) || 0) - (parseInt(a.bitrate) || 0)
-        )[0];
-
-        const streamUrl = this.toAbsoluteUrl(bestAudio.url, cleanBase);
-        if (streamUrl) {
-          logger.download(`[Invidious] ✓ Found itag ${bestAudio.itag} ${bestAudio.encoding} (fallback) via ${instance}`);
-          return {
-            streamUrl,
-            bitrate: parseInt(bestAudio.bitrate) || 128000,
-            codec: bestAudio.encoding || 'opus',
-            contentLength: parseInt(bestAudio.clen) || 0,
-            finalExtension: 'm4a', // Save as m4a for iOS compatibility
-            source: 'invidious',
-          };
-        }
+        logger.download(`[Invidious] ${instance} had no iOS-compatible MP4/AAC stream`);
       } catch (err: any) {
         logger.download(`[Invidious] ${instance} error: ${err?.message || err}`);
         continue;
@@ -290,9 +261,9 @@ class StreamExtractorService {
     preferredFormat: AudioFormat = 'm4a',
     onProgress?: (progress: number, message?: string) => void,
   ): Promise<AudioStreamResult | null> {
-    // Direct extraction only supports native M4A/AAC and opus
-    // MP3/FLAC/WAV need server-side transcoding → fall through to cobalt/loader.to
-    if (preferredFormat === 'mp3' || preferredFormat === 'flac' || preferredFormat === 'wav') {
+    // Direct extraction only supports native M4A/AAC. Every other selection
+    // needs server-side transcoding so that its container matches its extension.
+    if (preferredFormat !== 'm4a') {
       logger.download(`[StreamExtractor] ${preferredFormat.toUpperCase()} requires transcoding, skipping direct extraction`);
       return null;
     }
