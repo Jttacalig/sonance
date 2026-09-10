@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.jhet.sonance",
-      "buildNumber": "7",
+      "buildNumber": "8",
       "infoPlist": {
         "UIBackgroundModes": [
           "audio"
@@ -32,8 +32,9 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false,
       "package": "com.jhet.sonance",
+      "versionCode": 8,
+      "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -71,8 +72,9 @@
           },
           "android": {
             "minSdkVersion": 26,
-            "targetSdkVersion": 34,
-            "compileSdkVersion": 35
+            "targetSdkVersion": 35,
+            "compileSdkVersion": 35,
+            "buildToolsVersion": "35.0.0"
           }
         }
       ],

@@ -286,7 +286,11 @@ class DownloaderService {
           preferredFormat,
           onProgress,
         );
-        if (directResult) {
+        if (
+          directResult &&
+          directResult.streamUrl &&
+          (directResult.streamUrl.startsWith('http://') || directResult.streamUrl.startsWith('https://'))
+        ) {
           logger.download(`Direct extraction succeeded via ${directResult.source} (${Math.round(directResult.bitrate / 1000)}kbps ${directResult.codec})`);
           onProgress?.(0.35, 'Direct stream ready, starting download...');
           return {
@@ -315,9 +319,12 @@ class DownloaderService {
 
       if (initRes.ok) {
         const initData = await initRes.json();
-        if (initData.download_url && typeof initData.download_url === 'string' && initData.download_url.trim().length > 0) {
-          onProgress?.(0.35, 'Stream ready, starting download...');
-          return { streamUrl: initData.download_url.trim(), filename: initData.title, finalExtension };
+        if (initData.download_url && typeof initData.download_url === 'string') {
+          const sUrl = initData.download_url.trim();
+          if (sUrl.startsWith('http://') || sUrl.startsWith('https://')) {
+            onProgress?.(0.35, 'Stream ready, starting download...');
+            return { streamUrl: sUrl, filename: initData.title, finalExtension };
+          }
         }
         if (initData.progress_url) {
           // Poll progress for audio conversion (up to 45 seconds for full audio encoding)
@@ -334,13 +341,16 @@ class DownloaderService {
               }, 5000);
               if (pollRes.ok) {
                 const pollData = await pollRes.json();
-                if (pollData.download_url && typeof pollData.download_url === 'string' && pollData.download_url.trim().length > 0) {
-                  onProgress?.(0.35, 'Conversion complete, starting download...');
-                  return {
-                    streamUrl: pollData.download_url.trim(),
-                    filename: pollData.title || initData.title,
-                    finalExtension,
-                  };
+                if (pollData.download_url && typeof pollData.download_url === 'string') {
+                  const sUrl = pollData.download_url.trim();
+                  if (sUrl.startsWith('http://') || sUrl.startsWith('https://')) {
+                    onProgress?.(0.35, 'Conversion complete, starting download...');
+                    return {
+                      streamUrl: sUrl,
+                      filename: pollData.title || initData.title,
+                      finalExtension,
+                    };
+                  }
                 }
               }
             } catch (pollErr) {
@@ -386,15 +396,21 @@ class DownloaderService {
 
         if (response.ok) {
           const data = await response.json();
-          if (data.url) {
-            onProgress?.(0.35, 'Stream ready, starting download...');
-            return { streamUrl: data.url, filename: data.filename, finalExtension: formatParam };
+          if (data.url && typeof data.url === 'string') {
+            const sUrl = data.url.trim();
+            if (sUrl.startsWith('http://') || sUrl.startsWith('https://')) {
+              onProgress?.(0.35, 'Stream ready, starting download...');
+              return { streamUrl: sUrl, filename: data.filename, finalExtension: formatParam };
+            }
           }
           if (data.status === 'picker' && Array.isArray(data.picker) && data.picker.length > 0) {
             const firstItem = data.picker[0];
-            if (firstItem.url) {
-              onProgress?.(0.35, 'Stream ready, starting download...');
-              return { streamUrl: firstItem.url, filename: firstItem.filename, finalExtension: formatParam };
+            if (firstItem.url && typeof firstItem.url === 'string') {
+              const sUrl = firstItem.url.trim();
+              if (sUrl.startsWith('http://') || sUrl.startsWith('https://')) {
+                onProgress?.(0.35, 'Stream ready, starting download...');
+                return { streamUrl: sUrl, filename: firstItem.filename, finalExtension: formatParam };
+              }
             }
           }
         }

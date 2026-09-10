@@ -82,13 +82,35 @@ class StreamExtractorService {
   }
 
   /**
+   * Helper to ensure returned stream URLs are guaranteed to be valid absolute URLs
+   */
+  private toAbsoluteUrl(rawUrl: string | undefined | null, baseUrl: string): string | null {
+    if (!rawUrl || typeof rawUrl !== 'string') return null;
+    const trimmed = rawUrl.trim();
+    if (!trimmed) return null;
+
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+
+    const cleanBase = baseUrl.replace(/\/+$/, '');
+    const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+    const full = `${cleanBase}${cleanPath}`;
+    if (full.startsWith('http://') || full.startsWith('https://')) {
+      return full;
+    }
+    return null;
+  }
+
+  /**
    * Extracts the best M4A/AAC audio stream from a YouTube video using Piped API.
    * Tries all Piped instances in sequence until one succeeds.
    */
   private async tryPiped(videoId: string): Promise<AudioStreamResult | null> {
     for (const instance of PIPED_INSTANCES) {
       try {
-        const url = `${instance.replace(/\/+$/, '')}/streams/${videoId}`;
+        const cleanBase = instance.replace(/\/+$/, '');
+        const url = `${cleanBase}/streams/${videoId}`;
         logger.download(`[Piped] Trying ${instance} for ${videoId}`);
 
         const response = await this.fetchWithTimeout(url, 7000);
@@ -116,15 +138,18 @@ class StreamExtractorService {
 
         if (m4aStreams.length > 0) {
           const best = m4aStreams[0];
-          logger.download(`[Piped] ✓ Found ${best.quality} ${best.codec} stream via ${instance}`);
-          return {
-            streamUrl: best.url,
-            bitrate: best.bitrate || 128000,
-            codec: best.codec || 'mp4a.40.2',
-            contentLength: best.contentLength || 0,
-            finalExtension: 'm4a',
-            source: 'piped',
-          };
+          const streamUrl = this.toAbsoluteUrl(best.url, cleanBase);
+          if (streamUrl) {
+            logger.download(`[Piped] ✓ Found ${best.quality} ${best.codec} stream via ${instance}`);
+            return {
+              streamUrl,
+              bitrate: best.bitrate || 128000,
+              codec: best.codec || 'mp4a.40.2',
+              contentLength: best.contentLength || 0,
+              finalExtension: 'm4a',
+              source: 'piped',
+            };
+          }
         }
 
         // Fallback: any audio stream
@@ -134,16 +159,19 @@ class StreamExtractorService {
 
         if (anyAudio.length > 0) {
           const best = anyAudio[0];
-          const ext = best.mimeType?.includes('webm') ? 'webm' : 'm4a';
-          logger.download(`[Piped] ✓ Found ${best.quality} ${best.codec} (fallback) via ${instance}`);
-          return {
-            streamUrl: best.url,
-            bitrate: best.bitrate || 128000,
-            codec: best.codec || 'opus',
-            contentLength: best.contentLength || 0,
-            finalExtension: ext === 'webm' ? 'm4a' : ext, // Save as m4a for iOS compatibility
-            source: 'piped',
-          };
+          const streamUrl = this.toAbsoluteUrl(best.url, cleanBase);
+          if (streamUrl) {
+            const ext = best.mimeType?.includes('webm') ? 'webm' : 'm4a';
+            logger.download(`[Piped] ✓ Found ${best.quality} ${best.codec} (fallback) via ${instance}`);
+            return {
+              streamUrl,
+              bitrate: best.bitrate || 128000,
+              codec: best.codec || 'opus',
+              contentLength: best.contentLength || 0,
+              finalExtension: ext === 'webm' ? 'm4a' : ext, // Save as m4a for iOS compatibility
+              source: 'piped',
+            };
+          }
         }
 
         logger.download(`[Piped] ${instance} had streams but none matched audio criteria`);
@@ -201,15 +229,18 @@ class StreamExtractorService {
 
         if (m4aFormats.length > 0) {
           const best = m4aFormats[0];
-          logger.download(`[Invidious] ✓ Found itag ${best.itag} ${best.encoding} stream via ${instance}`);
-          return {
-            streamUrl: best.url,
-            bitrate: parseInt(best.bitrate) || 128000,
-            codec: best.encoding || 'aac',
-            contentLength: parseInt(best.clen) || 0,
-            finalExtension: 'm4a',
-            source: 'invidious',
-          };
+          const streamUrl = this.toAbsoluteUrl(best.url, cleanBase);
+          if (streamUrl) {
+            logger.download(`[Invidious] ✓ Found itag ${best.itag} ${best.encoding} stream via ${instance}`);
+            return {
+              streamUrl,
+              bitrate: parseInt(best.bitrate) || 128000,
+              codec: best.encoding || 'aac',
+              contentLength: parseInt(best.clen) || 0,
+              finalExtension: 'm4a',
+              source: 'invidious',
+            };
+          }
         }
 
         // Fallback: any audio stream
@@ -217,15 +248,18 @@ class StreamExtractorService {
           (a, b) => (parseInt(b.bitrate) || 0) - (parseInt(a.bitrate) || 0)
         )[0];
 
-        logger.download(`[Invidious] ✓ Found itag ${bestAudio.itag} ${bestAudio.encoding} (fallback) via ${instance}`);
-        return {
-          streamUrl: bestAudio.url,
-          bitrate: parseInt(bestAudio.bitrate) || 128000,
-          codec: bestAudio.encoding || 'opus',
-          contentLength: parseInt(bestAudio.clen) || 0,
-          finalExtension: 'm4a', // Save as m4a for iOS compatibility
-          source: 'invidious',
-        };
+        const streamUrl = this.toAbsoluteUrl(bestAudio.url, cleanBase);
+        if (streamUrl) {
+          logger.download(`[Invidious] ✓ Found itag ${bestAudio.itag} ${bestAudio.encoding} (fallback) via ${instance}`);
+          return {
+            streamUrl,
+            bitrate: parseInt(bestAudio.bitrate) || 128000,
+            codec: bestAudio.encoding || 'opus',
+            contentLength: parseInt(bestAudio.clen) || 0,
+            finalExtension: 'm4a', // Save as m4a for iOS compatibility
+            source: 'invidious',
+          };
+        }
       } catch (err: any) {
         logger.download(`[Invidious] ${instance} error: ${err?.message || err}`);
         continue;

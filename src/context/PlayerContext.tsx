@@ -240,7 +240,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
 
       // 3. Resolve and verify file URI on disk or online stream
-      let uriToPlay = track.uri;
+      let uriToPlay = track.uri || '';
       let verifiedArtworkUri = track.artworkUri;
 
       if (uriToPlay.startsWith('file://')) {
@@ -267,24 +267,37 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           uriToPlay = encodeURI(uriToPlay);
         }
       } else if (uriToPlay.startsWith('http://') || uriToPlay.startsWith('https://')) {
-        // Online stream URI
-        const isDirectAudioStream =
-          uriToPlay.includes('.googlevideo.com') ||
-          uriToPlay.includes('pipedproxy') ||
-          uriToPlay.includes('invidious') ||
-          uriToPlay.match(/\.(mp3|m4a|wav|flac|aac|ogg)(\?|$)/i);
+        // Check if it's already a direct playable audio stream vs an unextracted webpage
+        const isWebPage =
+          uriToPlay.includes('youtube.com/watch') ||
+          uriToPlay.includes('youtube.com/shorts') ||
+          uriToPlay.includes('youtu.be/') ||
+          uriToPlay.includes('soundcloud.com/') ||
+          uriToPlay.includes('instagram.com/') ||
+          uriToPlay.includes('tiktok.com/') ||
+          uriToPlay.includes('twitter.com/') ||
+          uriToPlay.includes('x.com/') ||
+          uriToPlay.includes('facebook.com/');
 
-        // If it's a web page URL (e.g. YouTube video URL in a queue), resolve stream URL
-        if (!isDirectAudioStream && (uriToPlay.includes('youtube.com') || uriToPlay.includes('youtu.be') || track.sourceUrl)) {
+        // If it's a webpage URL or not a direct media link, resolve stream URL
+        if (isWebPage || (!uriToPlay.includes('.googlevideo.com') && !uriToPlay.includes('pipedproxy') && !uriToPlay.includes('/videoplayback') && !uriToPlay.match(/\.(mp3|m4a|wav|flac|aac|ogg)(\?|$)/i))) {
           try {
             const resolved = await downloaderService.resolveAudioStreamUrl(track.sourceUrl || uriToPlay, 'm4a');
-            if (resolved && resolved.streamUrl) {
+            if (resolved && resolved.streamUrl && (resolved.streamUrl.startsWith('http://') || resolved.streamUrl.startsWith('https://'))) {
               uriToPlay = resolved.streamUrl;
+            } else {
+              throw new Error('Could not resolve playable audio stream URL.');
             }
-          } catch (resErr) {
-            console.warn('Online stream resolution error in PlayerContext:', resErr);
+          } catch (resErr: any) {
+            console.error('Online stream resolution error in PlayerContext:', resErr);
+            throw new Error(resErr?.message || 'Failed to resolve audio stream for playback.');
           }
         }
+      }
+
+      // Safety check: ensure uriToPlay is a valid URL before creating native audio player
+      if (!uriToPlay || (!uriToPlay.startsWith('file://') && !uriToPlay.startsWith('http://') && !uriToPlay.startsWith('https://'))) {
+        throw new Error(`Cannot play audio: Invalid URI format "${uriToPlay}"`);
       }
 
       if (verifiedArtworkUri && verifiedArtworkUri.startsWith('file://')) {
@@ -295,10 +308,16 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
 
       // 4. Create fresh new expo-audio player with immediate session activation
-      const player = createAudioPlayer(uriToPlay, {
-        updateInterval: 250,
-        keepAudioSessionActive: true,
-      });
+      let player: AudioPlayer;
+      try {
+        player = createAudioPlayer(uriToPlay, {
+          updateInterval: 250,
+          keepAudioSessionActive: true,
+        });
+      } catch (createErr: any) {
+        console.error('Failed to create native audio player:', createErr);
+        throw createErr;
+      }
       playerRef.current = player;
 
       // 5. Subscribe strictly to this player's events
@@ -307,14 +326,22 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // 6. Configure iOS Lock Screen controls & Dynamic Island / Control Center info
       try {
+        const metadata: any = {
+          title: track.title || 'Unknown Title',
+          artist: track.artist || 'Unknown Artist',
+          albumTitle: track.album || 'Sonance Player',
+        };
+        if (
+          verifiedArtworkUri &&
+          typeof verifiedArtworkUri === 'string' &&
+          (verifiedArtworkUri.startsWith('file://') || verifiedArtworkUri.startsWith('http://') || verifiedArtworkUri.startsWith('https://'))
+        ) {
+          metadata.artworkUrl = verifiedArtworkUri;
+        }
+
         player.setActiveForLockScreen(
           true,
-          {
-            title: track.title,
-            artist: track.artist,
-            albumTitle: track.album || 'Offline Library',
-            artworkUrl: verifiedArtworkUri,
-          },
+          metadata,
           {
             showSeekForward: true,
             showSeekBackward: true,
@@ -327,19 +354,29 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // 7. Set speed and start playback immediately
       if (playbackRate !== 1.0) {
-        player.playbackRate = playbackRate;
+        try {
+          player.playbackRate = playbackRate;
+        } catch (rateErr) {
+          console.warn('Set playback rate error:', rateErr);
+        }
       }
 
       // 8. Start playback immediately
       if (requestId === activeRequestIdRef.current) {
-        player.play();
-        setIsPlaying(true);
-        setIsLoading(false);
-        storageService.incrementPlayCount(track.id).catch(() => {});
+        try {
+          player.play();
+          setIsPlaying(true);
+          setIsLoading(false);
+          storageService.incrementPlayCount(track.id).catch(() => {});
+        } catch (playErr) {
+          console.error('Player play invocation error:', playErr);
+          throw playErr;
+        }
       }
     } catch (error) {
       console.error('Error playing track with expo-audio:', error);
       if (requestId === activeRequestIdRef.current) {
+        cleanupActivePlayer();
         isPlayRequestedRef.current = false;
         setIsLoading(false);
         setIsPlaying(false);

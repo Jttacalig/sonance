@@ -271,7 +271,11 @@ export const DownloaderScreen: React.FC = () => {
 
     try {
       const resolved = await downloaderService.resolveAudioStreamUrl(item.sourceUrl, 'm4a');
-      if (!resolved || !resolved.streamUrl) {
+      if (
+        !resolved ||
+        !resolved.streamUrl ||
+        (!resolved.streamUrl.startsWith('http://') && !resolved.streamUrl.startsWith('https://'))
+      ) {
         throw new Error('Could not resolve direct audio stream.');
       }
 
