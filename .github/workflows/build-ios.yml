@@ -3,7 +3,9 @@ name: Build iOS IPA for Sideloadly
 on:
   workflow_dispatch:
   push:
-    branches: [ master, main ]
+    tags:
+      - 'ios-*'
+      - 'v*-ios'
 
 jobs:
   build-ios:

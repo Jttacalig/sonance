@@ -3,7 +3,9 @@ name: Build Android APK (Android 8.0+)
 on:
   workflow_dispatch:
   push:
-    branches: [ master, main ]
+    tags:
+      - 'android-*'
+      - 'v*-android'
 
 jobs:
   build-android:
