@@ -20,6 +20,13 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: 📱 Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 📥 Install Android SDK Platform & Build-Tools
+        run: |
+          sdkmanager --install "platforms;android-35" "platforms;android-34" "build-tools;35.0.0"
+
       - name: ⚙️ Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -52,7 +59,10 @@ jobs:
             -Pandroid.injected.signing.store.password=sonancepass123 \
             -Pandroid.injected.signing.key.alias=sonance-key \
             -Pandroid.injected.signing.key.password=sonancepass123 \
-            --no-daemon
+            -Pandroid.suppressUnsupportedCompileSdk=35 \
+            --warning-mode=none \
+            --no-daemon \
+            --stacktrace
 
       - name: 📦 Rename & Organize APK
         run: |
