@@ -376,22 +376,36 @@ class DownloaderService {
     for (const baseUrl of instancesToTry) {
       try {
         const cleanBase = baseUrl.replace(/\/+$/, '');
-        const response = await this.fetchWithTimeout(`${cleanBase}/`, {
+        const payload = {
+          url: url,
+          downloadMode: 'audio',
+          audioFormat: formatParam === 'm4a' ? 'm4a' : 'mp3',
+          aFormat: formatParam === 'm4a' ? 'm4a' : 'mp3',
+          isAudioOnly: true,
+          audioBitrate: '320',
+        };
+
+        let response = await this.fetchWithTimeout(`${cleanBase}/`, {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
             'User-Agent': DEFAULT_USER_AGENT,
           },
-          body: JSON.stringify({
-            url: url,
-            downloadMode: 'audio',
-            audioFormat: formatParam === 'm4a' ? 'm4a' : 'mp3',
-            aFormat: formatParam === 'm4a' ? 'm4a' : 'mp3',
-            isAudioOnly: true,
-            audioBitrate: '320',
-          }),
+          body: JSON.stringify(payload),
         }, 5000);
+
+        if (!response.ok && response.status === 404) {
+          response = await this.fetchWithTimeout(`${cleanBase}/api/json`, {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'User-Agent': DEFAULT_USER_AGENT,
+            },
+            body: JSON.stringify(payload),
+          }, 5000);
+        }
 
         if (response.ok) {
           const data = await response.json();
@@ -450,7 +464,6 @@ class DownloaderService {
    */
   private async validateAudioFile(filePath: string, expectedExt: string): Promise<boolean> {
     try {
-      // Read first 12 bytes as base64 and decode to check magic bytes
       const base64Header = await FileSystem.readAsStringAsync(filePath, {
         encoding: FileSystem.EncodingType.Base64,
         length: 12,

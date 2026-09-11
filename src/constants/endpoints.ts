@@ -10,6 +10,8 @@ export const DEFAULT_COBALT_INSTANCES = [
   'https://cobalt.canine.tools',
   'https://cobalt.shyim.net',
   'https://cobalt.pervert.icu',
+  'https://dl.khub.io',
+  'https://cobalt-api.kavita.sh',
 ];
 
 /**
@@ -24,6 +26,9 @@ export const PIPED_INSTANCES = [
   'https://pipedapi.r4fo.com',
   'https://pipedapi.smnz.de',
   'https://piped-api.garudalinux.org',
+  'https://pipedapi.leptons.xyz',
+  'https://pa.il.ax',
+  'https://pipedapi.drgns.space',
 ];
 
 /**
@@ -37,6 +42,10 @@ export const INVIDIOUS_INSTANCES = [
   'https://invidious.private.coffee',
   'https://invidious.protokolla.fi',
   'https://yewtu.be',
+  'https://invidious.drgns.space',
+  'https://invidious.nerdvpn.de',
+  'https://inv.nadeko.net',
+  'https://invidious.no-val.org',
 ];
 
 /**
