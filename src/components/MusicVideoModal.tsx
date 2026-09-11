@@ -47,6 +47,8 @@ export const MusicVideoModal: React.FC<MusicVideoModalProps> = ({
 }) => {
   const { width: SCREEN_WIDTH } = useWindowDimensions();
   const { colors, isDark } = useTheme();
+  const [isStreamingAudio, setIsStreamingAudio] = useState(false);
+  const { currentTrack, isPlaying, playTrack, togglePlayPause } = usePlayer();
 
   if (!item) return null;
 
@@ -131,9 +133,6 @@ export const MusicVideoModal: React.FC<MusicVideoModalProps> = ({
     })();
     true;
   `;
-
-  const [isStreamingAudio, setIsStreamingAudio] = useState(false);
-  const { currentTrack, isPlaying, playTrack, togglePlayPause } = usePlayer();
 
   const handlePlayBackgroundAudio = async () => {
     if (!item) return;
