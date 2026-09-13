@@ -1,7 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Track, Playlist, AppSettings } from '../types/music';
-import { DEFAULT_COBALT_INSTANCES } from '../constants/endpoints';
 
 const STORAGE_KEYS = {
   TRACKS: '@apple_player_tracks_v1',
@@ -18,7 +17,6 @@ export const WALLPAPER_DIR = `${FileSystem.documentDirectory || ''}wallpapers/`;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   preferredAudioQuality: 'm4a',
-  cobaltApiUrl: DEFAULT_COBALT_INSTANCES[0],
   autoDownloadThumbnails: true,
   sleepTimerMinutes: null,
   enableHaptics: true,
@@ -114,6 +112,16 @@ class StorageService {
       await AsyncStorage.setItem(STORAGE_KEYS.TRACKS, JSON.stringify(tracks));
     } catch (error) {
       console.error('Error saving track:', error);
+      throw error;
+    }
+  }
+
+  async saveTracks(tracks: Track[]): Promise<void> {
+    await this.initStorage();
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.TRACKS, JSON.stringify(tracks));
+    } catch (error) {
+      console.error('Error batch saving tracks:', error);
       throw error;
     }
   }

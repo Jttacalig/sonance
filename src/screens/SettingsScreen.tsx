@@ -198,9 +198,7 @@ export const SettingsScreen: React.FC = () => {
   ];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LiquidBackground />
-
+    <View style={styles.container}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -432,10 +430,10 @@ export const SettingsScreen: React.FC = () => {
                     </View>
                     <View>
                       <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>
-                        Preferred Download Quality
+                        Preferred Audio Quality
                       </Text>
                       <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]}>
-                        Tap to switch audio stream format
+                        Preferred format for cloud streaming & playback
                       </Text>
                     </View>
                   </View>
@@ -446,6 +444,7 @@ export const SettingsScreen: React.FC = () => {
                     <Ionicons name="swap-horizontal" size={16} color={colors.textMuted} />
                   </View>
                 </TouchableOpacity>
+
 
                 {/* Sleep Timer */}
                 <View style={[styles.cardDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]} />
@@ -599,7 +598,7 @@ export const SettingsScreen: React.FC = () => {
                     style={{ width: 140, height: 24 }}
                     resizeMode="contain"
                   />
-                  <Text style={[styles.appVersionTag, { color: isDark ? '#FFFFFF' : colors.primary }]}>v1.2.1</Text>
+                  <Text style={[styles.appVersionTag, { color: isDark ? '#FFFFFF' : colors.primary }]}>v2.0.0</Text>
                 </View>
 
                 <View style={[styles.cardDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]} />

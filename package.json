@@ -1,6 +1,6 @@
 {
   "name": "apple-player",
-  "version": "1.2.2",
+  "version": "2.0.0",
   "main": "index.ts",
   "dependencies": {
     "@expo/metro-runtime": "~57.0.15",
@@ -19,12 +19,14 @@
     "expo-haptics": "~57.0.2",
     "expo-image": "~57.0.4",
     "expo-linear-gradient": "~57.0.1",
+    "expo-linking": "~57.0.10",
     "expo-modules-jsi": "57.1.0",
     "expo-sharing": "~57.0.18",
     "expo-splash-screen": "~57.0.8",
     "expo-sqlite": "~57.0.2",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "^57.0.3",
+    "expo-web-browser": "~57.0.3",
     "lucide-react-native": "^1.43.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",

@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { createAudioPlayer, setAudioModeAsync, setIsAudioActiveAsync, AudioPlayer, AudioStatus } from 'expo-audio';
+import { AppState, Platform } from 'react-native';
+import { createAudioPlayer, setAudioModeAsync, setIsAudioActiveAsync, AudioPlayer, AudioStatus, AudioSource } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 import { Track, RepeatMode } from '../types/music';
 import * as FileSystem from 'expo-file-system/legacy';
 import { storageService, MUSIC_DIR, ARTWORK_DIR } from '../services/storageService';
-import { downloaderService } from '../services/downloaderService';
 
 interface PlayerContextType {
   currentTrack: Track | null;
@@ -70,7 +70,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const currentTrackRef = useRef(currentTrack);
   currentTrackRef.current = currentTrack;
 
-  // Initialize iOS Background Audio Mode
+  // Initialize iOS & Android Background Audio Mode
   useEffect(() => {
     async function setupAudio() {
       try {
@@ -78,6 +78,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           playsInSilentMode: true,
           shouldPlayInBackground: true,
           interruptionMode: 'doNotMix',
+          allowsRecording: false,
+          shouldRouteThroughEarpiece: false,
+          allowsBackgroundRecording: false,
         });
         await setIsAudioActiveAsync(true);
       } catch (error) {
@@ -86,7 +89,30 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
     setupAudio();
 
+    // Re-affirm background audio mode on app state transitions
+    const appStateSub = AppState.addEventListener('change', async (nextState) => {
+      if ((nextState === 'background' || nextState === 'inactive') && isPlayRequestedRef.current) {
+        try {
+          await setAudioModeAsync({
+            playsInSilentMode: true,
+            shouldPlayInBackground: true,
+            interruptionMode: 'doNotMix',
+            allowsRecording: false,
+            shouldRouteThroughEarpiece: false,
+            allowsBackgroundRecording: false,
+          });
+          await setIsAudioActiveAsync(true);
+          if (playerRef.current && !playerRef.current.playing) {
+            playerRef.current.play();
+          }
+        } catch (e) {
+          console.warn('Background audio state ensure warning:', e);
+        }
+      }
+    });
+
     return () => {
+      appStateSub.remove();
       if (listenerRef.current) {
         listenerRef.current.remove();
         listenerRef.current = null;
@@ -121,16 +147,16 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [sleepTimerMinutes]);
 
   const onPlaybackStatusUpdate = useCallback((status: AudioStatus) => {
-    // Ignore events from old/removed players
     if (!playerRef.current || status.id !== playerRef.current.id) {
       return;
     }
 
-    if (status.currentTime !== undefined) {
-      setPosition(Math.round(status.currentTime));
+    if (status.currentTime !== undefined && !isNaN(status.currentTime)) {
+      const curTime = status.currentTime;
+      setPosition(Math.round(curTime));
     }
 
-    if (status.duration) {
+    if (status.duration && status.duration > 0 && !isNaN(status.duration)) {
       setDuration(Math.round(status.duration));
     }
 
@@ -142,15 +168,13 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setIsPlaying(true);
       setIsLoading(false);
     } else {
-      // If native player is not currently playing:
       if (!isPlayRequestedRef.current) {
-        // User explicitly paused playback
         setIsPlaying(false);
         setIsLoading(false);
       } else {
-        // User requested play, but native player is preparing or buffering
+        setIsPlaying(true);
         if (status.isLoaded && !status.isBuffering) {
-          // Player is ready, trigger play to ensure it starts without waiting for second click
+          setIsLoading(false);
           try {
             playerRef.current.play();
           } catch (e) {}
@@ -187,25 +211,19 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const playTrack = async (track: Track, newQueue?: Track[]) => {
-    // If clicking on the exact same track that already has an active player:
-    if (currentTrackRef.current?.id === track.id && playerRef.current) {
+    // If clicking on the exact same track that is already active:
+    if (currentTrackRef.current?.id === track.id) {
       if (Haptics.impactAsync) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       }
       if (isPlaying) {
-        isPlayRequestedRef.current = false;
-        playerRef.current.pause();
-        setIsPlaying(false);
+        await pauseTrack();
       } else {
-        isPlayRequestedRef.current = true;
-        setIsAudioActiveAsync(true).catch(() => {});
-        playerRef.current.play();
-        setIsPlaying(true);
+        await resumeTrack();
       }
       return;
     }
 
-    // Increment request ID to invalidate any in-flight transitions
     const requestId = ++activeRequestIdRef.current;
     isPlayRequestedRef.current = true;
 
@@ -216,30 +234,36 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       }
 
-      // 1. Fully stop, unhook listener, and remove old player
+      // 1. Fully stop and clean up existing native player
       cleanupActivePlayer();
 
       // 2. Update active queue and track state
       let activeQueue = newQueue || queueRef.current;
-      if (!activeQueue.some(t => t.id === track.id)) {
+      if (!activeQueue.some((t) => t.id === track.id)) {
         activeQueue = [track, ...activeQueue];
       }
       setQueue(activeQueue);
-      const newIndex = activeQueue.findIndex(t => t.id === track.id);
+      const newIndex = activeQueue.findIndex((t) => t.id === track.id);
       setQueueIndex(newIndex);
       setCurrentTrack(track);
       setPosition(0);
       setDuration(track.duration || 0);
 
-      // Ensure iOS audio subsystem is active
+      // Ensure audio subsystem and background playback are active
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        shouldPlayInBackground: true,
+        interruptionMode: 'doNotMix',
+        shouldRouteThroughEarpiece: false,
+        allowsRecording: false,
+      }).catch(() => {});
       await setIsAudioActiveAsync(true).catch(() => {});
 
-      // Check if a newer play request arrived while setting up
       if (requestId !== activeRequestIdRef.current) {
         return;
       }
 
-      // 3. Resolve and verify file URI on disk or online stream
+      // 3. Resolve playback source (local offline file or cloud/online stream)
       let uriToPlay = track.uri || '';
       let verifiedArtworkUri = track.artworkUri;
 
@@ -252,84 +276,55 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             if (currentInfo.exists) {
               uriToPlay = currentPath;
             } else {
-              const origInfo = await FileSystem.getInfoAsync(uriToPlay);
-              if (origInfo.exists) {
-                // original URI still exists
-              } else {
-                console.warn('Audio file not found at:', currentPath, 'or', uriToPlay);
+              const baseName = fileName.replace(/\.[a-zA-Z0-9]+$/, '');
+              const altExts = ['m4a', 'mp3', 'flac', 'wav', 'aac'];
+              for (const ext of altExts) {
+                const altPath = `${MUSIC_DIR}${baseName}.${ext}`;
+                const altInfo = await FileSystem.getInfoAsync(altPath);
+                if (altInfo.exists) {
+                  uriToPlay = altPath;
+                  break;
+                }
               }
             }
           } catch (fsErr) {
             console.warn('File check warning:', fsErr);
           }
         }
-        if (uriToPlay.includes(' ')) {
-          uriToPlay = encodeURI(uriToPlay);
-        }
-      } else if (uriToPlay.startsWith('http://') || uriToPlay.startsWith('https://')) {
-        // Check if it's already a direct playable audio stream vs an unextracted webpage
-        const isWebPage =
-          uriToPlay.includes('youtube.com/watch') ||
-          uriToPlay.includes('youtube.com/shorts') ||
-          uriToPlay.includes('youtu.be/') ||
-          uriToPlay.includes('soundcloud.com/') ||
-          uriToPlay.includes('instagram.com/') ||
-          uriToPlay.includes('tiktok.com/') ||
-          uriToPlay.includes('twitter.com/') ||
-          uriToPlay.includes('x.com/') ||
-          uriToPlay.includes('facebook.com/');
+        try {
+          uriToPlay = encodeURI(decodeURI(uriToPlay));
+        } catch (e) {}
 
-        // If it's a webpage URL or not a direct media link, resolve stream URL
-        if (isWebPage || (!uriToPlay.includes('.googlevideo.com') && !uriToPlay.includes('pipedproxy') && !uriToPlay.includes('/videoplayback') && !uriToPlay.match(/\.(mp3|m4a|wav|flac|aac|ogg)(\?|$)/i))) {
-          try {
-            const resolved = await downloaderService.resolveAudioStreamUrl(track.sourceUrl || uriToPlay, 'm4a');
-            if (resolved && resolved.streamUrl && (resolved.streamUrl.startsWith('http://') || resolved.streamUrl.startsWith('https://'))) {
-              uriToPlay = resolved.streamUrl;
-            } else {
-              throw new Error('Could not resolve playable audio stream URL.');
-            }
-          } catch (resErr: any) {
-            console.error('Online stream resolution error in PlayerContext:', resErr);
-            throw new Error(resErr?.message || 'Failed to resolve audio stream for playback.');
+        if (verifiedArtworkUri && verifiedArtworkUri.startsWith('file://')) {
+          const artFileName = verifiedArtworkUri.split('/').pop()?.split('?')[0];
+          if (artFileName) {
+            verifiedArtworkUri = `${ARTWORK_DIR}${artFileName}`;
           }
         }
       }
 
-      // Safety check: ensure uriToPlay is a valid URL before creating native audio player
-      if (!uriToPlay || (!uriToPlay.startsWith('file://') && !uriToPlay.startsWith('http://') && !uriToPlay.startsWith('https://'))) {
-        throw new Error(`Cannot play audio: Invalid URI format "${uriToPlay}"`);
-      }
+      // 4. Construct AudioSource with custom headers if needed (Google Drive streams)
+      const source: AudioSource = track.streamHeaders
+        ? { uri: uriToPlay, headers: track.streamHeaders }
+        : uriToPlay;
 
-      if (verifiedArtworkUri && verifiedArtworkUri.startsWith('file://')) {
-        const artFileName = verifiedArtworkUri.split('/').pop()?.split('?')[0];
-        if (artFileName) {
-          verifiedArtworkUri = `${ARTWORK_DIR}${artFileName}`;
-        }
-      }
-
-      // 4. Create fresh new expo-audio player with immediate session activation
-      let player: AudioPlayer;
-      try {
-        player = createAudioPlayer(uriToPlay, {
-          updateInterval: 250,
-          keepAudioSessionActive: true,
-        });
-      } catch (createErr: any) {
-        console.error('Failed to create native audio player:', createErr);
-        throw createErr;
-      }
+      // 5. Create fresh expo-audio native player
+      const player = createAudioPlayer(source, {
+        updateInterval: 250,
+        keepAudioSessionActive: true,
+        preferredForwardBufferDuration: 30,
+      });
       playerRef.current = player;
 
-      // 5. Subscribe strictly to this player's events
       const sub = player.addListener('playbackStatusUpdate', onPlaybackStatusUpdate);
       listenerRef.current = sub;
 
-      // 6. Configure iOS Lock Screen controls & Dynamic Island / Control Center info
+      // 6. Configure iOS Lock Screen controls & Now Playing metadata
       try {
         const metadata: any = {
           title: track.title || 'Unknown Title',
           artist: track.artist || 'Unknown Artist',
-          albumTitle: track.album || 'Sonance Player',
+          albumTitle: track.album || (track.isCloudStream ? 'Cloud Stream' : 'Sonance Player'),
         };
         if (
           verifiedArtworkUri &&
@@ -339,20 +334,15 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           metadata.artworkUrl = verifiedArtworkUri;
         }
 
-        player.setActiveForLockScreen(
-          true,
-          metadata,
-          {
-            showSeekForward: true,
-            showSeekBackward: true,
-            isLiveStream: false,
-          }
-        );
+        player.setActiveForLockScreen(true, metadata, {
+          showSeekForward: true,
+          showSeekBackward: true,
+          isLiveStream: false,
+        });
       } catch (e) {
         console.warn('Lockscreen metadata set error:', e);
       }
 
-      // 7. Set speed and start playback immediately
       if (playbackRate !== 1.0) {
         try {
           player.playbackRate = playbackRate;
@@ -361,20 +351,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       }
 
-      // 8. Start playback immediately
       if (requestId === activeRequestIdRef.current) {
-        try {
-          player.play();
-          setIsPlaying(true);
-          setIsLoading(false);
-          storageService.incrementPlayCount(track.id).catch(() => {});
-        } catch (playErr) {
-          console.error('Player play invocation error:', playErr);
-          throw playErr;
-        }
+        player.play();
+        setIsPlaying(true);
+        setIsLoading(false);
+        storageService.incrementPlayCount(track.id).catch(() => {});
       }
     } catch (error) {
-      console.error('Error playing track with expo-audio:', error);
+      console.error('Error playing track in PlayerContext:', error);
       if (requestId === activeRequestIdRef.current) {
         cleanupActivePlayer();
         isPlayRequestedRef.current = false;
@@ -450,9 +434,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const skipToPrevious = async () => {
-    if (position > 3 && playerRef.current) {
-      await playerRef.current.seekTo(0);
-      setPosition(0);
+    if (position > 3) {
+      await seekTo(0);
       return;
     }
 
@@ -471,9 +454,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const seekTo = async (seconds: number) => {
+    setPosition(seconds);
     if (playerRef.current) {
       await playerRef.current.seekTo(seconds);
-      setPosition(seconds);
     }
   };
 
@@ -562,3 +545,4 @@ export const usePlayer = (): PlayerContextType => {
   }
   return context;
 };
+

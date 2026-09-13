@@ -264,11 +264,11 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
   return (
     <Animated.View
       {...panResponder.panHandlers}
-        style={[
+      style={[
         styles.wrapper,
         {
           bottom: bottomOffset,
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.26)' : 'rgba(255, 255, 255, 0.95)',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.95)',
           shadowColor: '#000',
           transform: [
             { translateX: pan.x },
@@ -280,16 +280,24 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
       ]}
     >
       <BlurView
-        intensity={Platform.OS === 'ios' ? 85 : 100}
+        intensity={Platform.OS === 'ios' ? 90 : 100}
         tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
         style={styles.blurWrapper}
       >
-        {/* Crystal Clear Liquid Glass Sheen */}
+        {/* Pure Acrylic Liquid Glass Base */}
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: isDark ? 'rgba(12, 16, 28, 0.52)' : 'rgba(255, 255, 255, 0.75)' },
+          ]}
+        />
+
+        {/* Specular Liquid Glass Sheen */}
         <LinearGradient
           colors={
             isDark
-              ? ['rgba(255, 255, 255, 0.16)', 'rgba(255, 255, 255, 0.04)', 'rgba(255, 255, 255, 0.01)']
-              : ['rgba(255, 255, 255, 0.95)', 'rgba(245, 248, 255, 0.7)']
+              ? ['rgba(255, 255, 255, 0.16)', 'rgba(255, 255, 255, 0.02)', 'transparent']
+              : ['rgba(255, 255, 255, 0.95)', 'rgba(245, 248, 255, 0.75)']
           }
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
@@ -300,11 +308,11 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
         <LinearGradient
           colors={
             isDark
-              ? ['rgba(255, 255, 255, 0.65)', 'rgba(255, 255, 255, 0.18)', 'transparent']
+              ? ['rgba(255, 255, 255, 0.55)', 'rgba(255, 255, 255, 0.12)', 'transparent']
               : ['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.25)', 'transparent']
           }
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.9, y: 0 }}
           style={styles.topSpecularLine}
         />
 
@@ -312,7 +320,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
         <View
           style={[
             styles.progressBarBackground,
-            { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)' },
+            { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.06)' },
           ]}
         >
           <View
@@ -320,7 +328,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
               styles.progressBarFill,
               {
                 width: `${progress * 100}%`,
-                backgroundColor: isDark ? '#FFFFFF' : '#0F172A',
+                backgroundColor: '#FA243C',
               },
             ]}
           />
@@ -336,7 +344,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
             style={[
               styles.artContainer,
               {
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.28)' : '#FFFFFF',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : '#FFFFFF',
               },
             ]}
           >
@@ -352,81 +360,66 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
             )}
           </View>
 
-          {/* Info with Title, Seamless Floating Visualizer, Artist, and Live Timeline */}
+          {/* Info with Title, Floating Visualizer, Artist */}
           <View style={styles.infoContainer}>
             <View style={styles.titleRow}>
-              <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
+              <Text style={[styles.title, { color: isDark ? '#FFFFFF' : colors.textPrimary }]} numberOfLines={1}>
                 {currentTrack.title}
               </Text>
 
               {/* Seamless Clean Floating Visualizer */}
               <View style={styles.visualizerRow}>
-                <VisualizerBar isPlaying={isPlaying} delay={0} color={isDark ? '#FFFFFF' : '#0F172A'} maxHeight={16} />
-                <VisualizerBar isPlaying={isPlaying} delay={90} color={isDark ? '#FFFFFF' : '#0F172A'} maxHeight={16} />
-                <VisualizerBar isPlaying={isPlaying} delay={180} color={isDark ? '#FFFFFF' : '#0F172A'} maxHeight={16} />
-                <VisualizerBar isPlaying={isPlaying} delay={60} color={isDark ? '#FFFFFF' : '#0F172A'} maxHeight={16} />
+                <VisualizerBar isPlaying={isPlaying} delay={0} color={isDark ? '#FA243C' : colors.primary} maxHeight={14} />
+                <VisualizerBar isPlaying={isPlaying} delay={90} color={isDark ? '#FA243C' : colors.primary} maxHeight={14} />
+                <VisualizerBar isPlaying={isPlaying} delay={180} color={isDark ? '#FA243C' : colors.primary} maxHeight={14} />
+                <VisualizerBar isPlaying={isPlaying} delay={60} color={isDark ? '#FA243C' : colors.primary} maxHeight={14} />
               </View>
             </View>
 
             <View style={styles.subtitleRow}>
-              <Text style={[styles.artist, { color: colors.textSecondary }]} numberOfLines={1}>
+              <Text style={[styles.artist, { color: isDark ? 'rgba(255, 255, 255, 0.72)' : colors.textSecondary }]} numberOfLines={1}>
                 {currentTrack.artist}
               </Text>
-              <Text style={[styles.timeDot, { color: colors.textMuted }]}>•</Text>
-              <Text style={[styles.timelineText, { color: colors.textMuted }]}>
+              <Text style={[styles.timeDot, { color: isDark ? 'rgba(255, 255, 255, 0.4)' : colors.textMuted }]}>•</Text>
+              <Text style={[styles.timelineText, { color: isDark ? 'rgba(255, 255, 255, 0.5)' : colors.textMuted }]}>
                 {formatTime(position)} / {formatTime(totalDuration)}
               </Text>
             </View>
           </View>
 
-          {/* Liquid Glass Controls with Circular Glass Buttons */}
+          {/* Liquid Glass Controls */}
           <View style={styles.controls}>
             <TouchableOpacity
-              style={styles.playBtnWrapper}
+              style={styles.floatingActionBtn}
               onPress={(e) => {
                 e.stopPropagation();
                 togglePlayPause();
               }}
-              activeOpacity={0.85}
+              activeOpacity={0.75}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <View
-                style={[
-                  styles.playBtn,
-                  {
-                    backgroundColor: isDark ? '#FFFFFF' : '#0F172A',
-                    shadowColor: '#000',
-                  },
-                ]}
-              >
-                {isLoading ? (
-                  <Ionicons name="sync-outline" size={18} color={isDark ? '#000000' : '#FFFFFF'} />
-                ) : (
-                  <Ionicons
-                    name={isPlaying ? 'pause' : 'play'}
-                    size={18}
-                    color={isDark ? '#000000' : '#FFFFFF'}
-                    style={isPlaying ? {} : { marginLeft: 2 }}
-                  />
-                )}
-              </View>
+              {isLoading ? (
+                <Ionicons name="sync-outline" size={24} color={isDark ? '#FFFFFF' : '#0F172A'} />
+              ) : (
+                <Ionicons
+                  name={isPlaying ? 'pause' : 'play'}
+                  size={24}
+                  color={isDark ? '#FFFFFF' : '#0F172A'}
+                  style={isPlaying ? {} : { marginLeft: 2 }}
+                />
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[
-                styles.circularGlassBtn,
-                {
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.85)',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.06)',
-                },
-              ]}
+              style={styles.floatingActionBtn}
               onPress={(e) => {
                 e.stopPropagation();
                 skipToNext();
               }}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              activeOpacity={0.75}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="play-forward" size={18} color={colors.textPrimary} />
+              <Ionicons name="play-forward" size={22} color={isDark ? '#FFFFFF' : '#0F172A'} />
             </TouchableOpacity>
 
             {/* Close / Dismiss 'X' Button */}
@@ -434,18 +427,18 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
               style={[
                 styles.closeGlassBtn,
                 {
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)',
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
                 },
               ]}
               onPress={(e) => {
                 e.stopPropagation();
                 handleDismiss();
               }}
-              hitSlop={{ top: 10, bottom: 10, left: 8, right: 10 }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityLabel="Stop and close player"
             >
-              <Ionicons name="close" size={16} color={colors.textSecondary} />
+              <Ionicons name="close" size={15} color={isDark ? 'rgba(255, 255, 255, 0.7)' : colors.textSecondary} />
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -457,39 +450,40 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ bottomOffset = 0 }) => {
 const styles = StyleSheet.create({
   wrapper: {
     position: 'absolute',
-    left: SPACING.md,
-    right: SPACING.md,
-    borderRadius: RADIUS.clay,
-    borderWidth: 1.5,
+    left: 14,
+    right: 14,
+    borderRadius: 18,
+    borderWidth: 1,
     overflow: 'hidden',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 22,
+    elevation: 14,
   },
   blurWrapper: {
     overflow: 'hidden',
+    borderRadius: 18,
   },
   progressBarBackground: {
-    height: 4,
+    height: 2.5,
     width: '100%',
   },
   progressBarFill: {
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 1,
   },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: SPACING.sm + 2,
-    paddingHorizontal: SPACING.md,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   artContainer: {
-    width: 46,
-    height: 46,
-    borderRadius: RADIUS.md,
+    width: 44,
+    height: 44,
+    borderRadius: 10,
     overflow: 'hidden',
-    borderWidth: 1.2,
+    borderWidth: 1,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -507,8 +501,8 @@ const styles = StyleSheet.create({
   },
   infoContainer: {
     flex: 1,
-    marginLeft: SPACING.md,
-    marginRight: SPACING.sm,
+    marginLeft: 12,
+    marginRight: 8,
     justifyContent: 'center',
   },
   titleRow: {
@@ -516,24 +510,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 6,
-    marginBottom: 3,
+    marginBottom: 2,
   },
   title: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: -0.2,
   },
   visualizerRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 2.5,
-    height: 16,
+    height: 14,
     marginLeft: 6,
     paddingBottom: 1,
   },
   vBar: {
-    width: 2.8,
+    width: 2.5,
     borderRadius: 1.5,
   },
   subtitleRow: {
@@ -542,9 +536,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   artist: {
-    maxWidth: '50%',
+    maxWidth: '52%',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   timeDot: {
     fontSize: 10,
@@ -552,51 +546,28 @@ const styles = StyleSheet.create({
   },
   timelineText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '500',
     fontVariant: ['tabular-nums'],
   },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.xs,
+    gap: 4,
   },
-  playBtnWrapper: {
-    borderRadius: 18,
-  },
-  playBtn: {
+  floatingActionBtn: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1.2,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  controlBtn: {
-    padding: SPACING.xs,
-    marginLeft: 2,
-  },
-  circularGlassBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
     justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    marginLeft: 4,
   },
   closeGlassBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    marginLeft: 3,
+    marginLeft: 2,
   },
   topSpecularLine: {
     height: 1.2,

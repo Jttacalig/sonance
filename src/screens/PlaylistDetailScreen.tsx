@@ -45,9 +45,7 @@ export const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LiquidBackground />
-
+    <View style={styles.container}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         {/* Sleek Minimal Header */}
         <View style={styles.header}>

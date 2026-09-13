@@ -118,9 +118,7 @@ export const PlaylistsScreen: React.FC<PlaylistsScreenProps> = ({ onSelectPlayli
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LiquidBackground />
-
+    <View style={styles.container}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         {/* Sleek Minimal Header */}
         <View style={styles.header}>
@@ -181,7 +179,11 @@ export const PlaylistsScreen: React.FC<PlaylistsScreenProps> = ({ onSelectPlayli
                 styles.tabBtn,
                 activeTab === 'playlists' && [
                   styles.activeTabBtn,
-                  { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.22)' : '#FFFFFF' },
+                  {
+                    backgroundColor: isDark ? 'rgba(250, 36, 60, 0.22)' : 'rgba(250, 36, 60, 0.12)',
+                    borderColor: isDark ? 'rgba(255, 75, 105, 0.55)' : 'rgba(250, 36, 60, 0.35)',
+                    borderWidth: 1,
+                  },
                 ],
               ]}
               onPress={() => {
@@ -190,15 +192,15 @@ export const PlaylistsScreen: React.FC<PlaylistsScreenProps> = ({ onSelectPlayli
               }}
             >
               <Ionicons
-                name="albums-outline"
+                name="albums"
                 size={16}
-                color={activeTab === 'playlists' ? (isDark ? '#FFFFFF' : colors.primary) : colors.textMuted}
+                color={activeTab === 'playlists' ? '#FA243C' : colors.textMuted}
               />
               <Text
                 style={[
                   styles.tabBtnText,
-                  { color: activeTab === 'playlists' ? colors.textPrimary : colors.textSecondary },
-                  activeTab === 'playlists' && { fontWeight: '800' },
+                  { color: activeTab === 'playlists' ? '#FA243C' : colors.textSecondary },
+                  activeTab === 'playlists' && { fontWeight: '700' },
                 ]}
               >
                 Playlists
@@ -210,7 +212,11 @@ export const PlaylistsScreen: React.FC<PlaylistsScreenProps> = ({ onSelectPlayli
                 styles.tabBtn,
                 activeTab === 'folders' && [
                   styles.activeTabBtn,
-                  { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.22)' : '#FFFFFF' },
+                  {
+                    backgroundColor: isDark ? 'rgba(250, 36, 60, 0.22)' : 'rgba(250, 36, 60, 0.12)',
+                    borderColor: isDark ? 'rgba(255, 75, 105, 0.55)' : 'rgba(250, 36, 60, 0.35)',
+                    borderWidth: 1,
+                  },
                 ],
               ]}
               onPress={() => {
@@ -219,18 +225,18 @@ export const PlaylistsScreen: React.FC<PlaylistsScreenProps> = ({ onSelectPlayli
               }}
             >
               <Ionicons
-                name="folder-open-outline"
+                name="folder"
                 size={16}
-                color={activeTab === 'folders' ? (isDark ? '#FFFFFF' : colors.primary) : colors.textMuted}
+                color={activeTab === 'folders' ? '#FA243C' : colors.textMuted}
               />
               <Text
                 style={[
                   styles.tabBtnText,
-                  { color: activeTab === 'folders' ? colors.textPrimary : colors.textSecondary },
-                  activeTab === 'folders' && { fontWeight: '800' },
+                  { color: activeTab === 'folders' ? '#FA243C' : colors.textSecondary },
+                  activeTab === 'folders' && { fontWeight: '700' },
                 ]}
               >
-                Folders Explorer
+                Folders
               </Text>
             </TouchableOpacity>
           </View>

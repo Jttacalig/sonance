@@ -313,11 +313,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
             </View>
           ) : (
             /* Main Player View: Flex-1 Full Height with generous balanced spacing */
-            <ScrollView
-              contentContainerStyle={styles.mainContent}
-              showsVerticalScrollIndicator={false}
-              bounces={false}
-            >
+            <View style={styles.mainContent}>
               {/* 1. Artwork or Synced Lyrics Hero Section */}
               <View style={styles.artworkSection}>
                 {showLyrics ? (
@@ -842,7 +838,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                   </BlurView>
                 </View>
               </View>
-            </ScrollView>
+            </View>
           )}
         </SafeAreaView>
 
@@ -921,7 +917,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   mainContent: {
-    flexGrow: 1,
+    flex: 1,
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.lg + 2,
     paddingTop: SPACING.xs,

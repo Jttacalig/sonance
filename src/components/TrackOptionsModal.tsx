@@ -8,13 +8,16 @@ import {
   Image,
   Alert,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
+import * as Haptics from 'expo-haptics';
 import { Track } from '../types/music';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
 import { MetadataEditorModal } from './MetadataEditorModal';
+import { metadataMatcherService } from '../services/metadataMatcherService';
 import { SPACING, RADIUS } from '../constants/theme';
 
 interface TrackOptionsModalProps {
@@ -30,12 +33,41 @@ export const TrackOptionsModal: React.FC<TrackOptionsModalProps> = ({
   onClose,
   onTrackDeleted,
 }) => {
-  const { playlists, toggleFavorite, addTrackToPlaylist, deleteTrack } = useLibrary();
+  const { playlists, toggleFavorite, addTrackToPlaylist, deleteTrack, refreshLibrary } = useLibrary();
   const { colors, isDark } = useTheme();
   const [showPlaylistPicker, setShowPlaylistPicker] = useState(false);
   const [showMetadataEditor, setShowMetadataEditor] = useState(false);
+  const [isAutoMatching, setIsAutoMatching] = useState(false);
 
   if (!track) return null;
+
+  const handleMagicMatch = async () => {
+    if (isAutoMatching) return;
+    try {
+      setIsAutoMatching(true);
+      if (Haptics.impactAsync) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      }
+      const updated = await metadataMatcherService.autoMatchSingleTrack(track);
+      if (updated) {
+        if (Haptics.notificationAsync) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        }
+        await refreshLibrary();
+        onClose();
+        Alert.alert(
+          '✨ Magic Match Success!',
+          `Updated with official 4K artwork & tags for:\n"${updated.title}" by ${updated.artist}`
+        );
+      } else {
+        setShowMetadataEditor(true);
+      }
+    } catch (e: any) {
+      setShowMetadataEditor(true);
+    } finally {
+      setIsAutoMatching(false);
+    }
+  };
 
   const handleToggleFavorite = async () => {
     await toggleFavorite(track.id);
@@ -196,6 +228,22 @@ export const TrackOptionsModal: React.FC<TrackOptionsModalProps> = ({
                 <Ionicons name="add-circle-outline" size={22} color={colors.textPrimary} />
                 <Text style={[styles.optionLabel, { color: colors.textPrimary }]}>
                   Add to a Playlist...
+                </Text>
+              </TouchableOpacity>
+
+              {/* Magic Match 4K Cover & Info */}
+              <TouchableOpacity
+                style={styles.optionRow}
+                onPress={handleMagicMatch}
+                disabled={isAutoMatching}
+              >
+                {isAutoMatching ? (
+                  <ActivityIndicator size="small" color={colors.primary} style={{ width: 22, height: 22 }} />
+                ) : (
+                  <Ionicons name="sparkles" size={22} color={colors.primary} />
+                )}
+                <Text style={[styles.optionLabel, { color: colors.textPrimary, fontWeight: '700' }]}>
+                  Magic Auto-Match 4K Cover
                 </Text>
               </TouchableOpacity>
 

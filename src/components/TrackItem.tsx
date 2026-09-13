@@ -44,17 +44,22 @@ export const TrackItem: React.FC<TrackItemProps> = ({
         styles.outerWrapper,
         {
           borderColor: isCurrent
-            ? colors.primary
+            ? (isDark ? 'rgba(255, 80, 115, 0.65)' : 'rgba(250, 36, 60, 0.50)')
             : isDark
-            ? 'rgba(255, 255, 255, 0.20)'
-            : 'rgba(255, 255, 255, 0.92)',
-          shadowColor: isCurrent ? colors.primary : isDark ? '#000' : '#8CA0BA',
+            ? 'rgba(255, 255, 255, 0.14)'
+            : 'rgba(255, 255, 255, 0.85)',
+          borderTopColor: isCurrent
+            ? (isDark ? 'rgba(255, 150, 175, 0.90)' : 'rgba(255, 100, 130, 0.90)')
+            : isDark
+            ? 'rgba(255, 255, 255, 0.35)'
+            : 'rgba(255, 255, 255, 0.98)',
+          shadowColor: isCurrent ? '#FA243C' : isDark ? '#000' : '#8CA0BA',
         },
         isCurrent && styles.activeOuterWrapper,
       ]}
     >
       <BlurView
-        intensity={Platform.OS === 'ios' ? 85 : 100}
+        intensity={Platform.OS === 'ios' ? 75 : 85}
         tint={Platform.OS === 'ios' ? 'systemUltraThinMaterial' : (isDark ? 'dark' : 'light')}
         style={styles.blurContainer}
       >
@@ -124,28 +129,41 @@ export const TrackItem: React.FC<TrackItemProps> = ({
 
           {/* Track Info */}
           <View style={styles.infoContainer}>
-            <Text
-              style={[
-                styles.title,
-                { color: isCurrent ? (isDark ? '#FFFFFF' : colors.primary) : colors.textPrimary },
-              ]}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {track.title}
-            </Text>
+            <View style={styles.titleRow}>
+              <Text
+                style={[
+                  styles.title,
+                  { color: isCurrent ? (isDark ? '#FA243C' : colors.primary) : (isDark ? '#FFFFFF' : colors.textPrimary) },
+                ]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {track.title}
+              </Text>
+              {track.isCloudStream || track.sourceType === 'gdrive' ? (
+                <View style={[styles.sourceBadge, { backgroundColor: 'rgba(66, 133, 244, 0.15)', borderColor: 'rgba(66, 133, 244, 0.3)' }]}>
+                  <Ionicons name="cloud" size={10} color="#4285F4" style={{ marginRight: 3 }} />
+                  <Text style={[styles.sourceBadgeText, { color: '#4285F4' }]}>Cloud</Text>
+                </View>
+              ) : track.sourceType === 'audius' ? (
+                <View style={[styles.sourceBadge, { backgroundColor: 'rgba(250, 36, 60, 0.14)', borderColor: 'rgba(250, 36, 60, 0.3)' }]}>
+                  <Ionicons name="globe" size={10} color="#FA243C" style={{ marginRight: 3 }} />
+                  <Text style={[styles.sourceBadgeText, { color: '#FA243C' }]}>Online</Text>
+                </View>
+              ) : null}
+            </View>
             <View style={styles.metaRow}>
-              <Text style={[styles.artist, { color: colors.textSecondary }]} numberOfLines={1}>
+              <Text style={[styles.artist, { color: isDark ? 'rgba(255, 255, 255, 0.7)' : colors.textSecondary }]} numberOfLines={1}>
                 {track.artist}
               </Text>
-              <Text style={[styles.dotSeparator, { color: colors.textMuted }]}>•</Text>
-              <Text style={[styles.duration, { color: colors.textMuted }]}>
+              <Text style={[styles.dotSeparator, { color: isDark ? 'rgba(255, 255, 255, 0.4)' : colors.textMuted }]}>•</Text>
+              <Text style={[styles.duration, { color: isDark ? 'rgba(255, 255, 255, 0.5)' : colors.textMuted }]}>
                 {formatDuration(track.duration)}
               </Text>
-              {track.fileSize ? (
+              {track.fileSize && !track.isCloudStream ? (
                 <>
-                  <Text style={[styles.dotSeparator, { color: colors.textMuted }]}>•</Text>
-                  <Text style={[styles.fileSize, { color: colors.textDim }]}>
+                  <Text style={[styles.dotSeparator, { color: isDark ? 'rgba(255, 255, 255, 0.4)' : colors.textMuted }]}>•</Text>
+                  <Text style={[styles.fileSize, { color: isDark ? 'rgba(255, 255, 255, 0.4)' : colors.textDim }]}>
                     {formatFileSize(track.fileSize)}
                   </Text>
                 </>
@@ -243,19 +261,39 @@ const styles = StyleSheet.create({
     marginLeft: SPACING.md,
     justifyContent: 'center',
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+    marginBottom: 2,
+  },
   title: {
+    flex: 1,
     fontSize: 15,
-    fontWeight: '800',
-    marginBottom: 3,
+    fontWeight: '700',
     letterSpacing: -0.2,
+  },
+  sourceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: RADIUS.full,
+    borderWidth: 0.8,
+  },
+  sourceBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   artist: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12.5,
+    fontWeight: '500',
     maxWidth: 130,
   },
   dotSeparator: {

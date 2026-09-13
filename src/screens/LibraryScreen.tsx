@@ -27,16 +27,17 @@ import { TransferConfirmationModal } from '../components/TransferConfirmationMod
 import { LiquidBackground } from '../components/LiquidBackground';
 import { Track } from '../types/music';
 import { CandidateFile } from '../services/fileImportService';
+import { metadataMatcherService } from '../services/metadataMatcherService';
 import { SPACING, RADIUS } from '../constants/theme';
 
 type FilterTab = 'all' | 'favorites' | 'imported' | 'recent';
 type SortOption = 'date_desc' | 'date_asc' | 'alpha_asc' | 'alpha_desc';
 
 interface LibraryScreenProps {
-  onNavigateToDownloader?: () => void;
+  onNavigateToCloud?: () => void;
 }
 
-export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownloader }) => {
+export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToCloud }) => {
   const {
     tracks,
     favorites,
@@ -229,18 +230,64 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
     setCandidateSkippedCount(0);
   };
 
+  const handleBatchMagicMatch = async () => {
+    const unCovered = tracks.filter((t) => !t.artworkUri);
+    if (unCovered.length === 0) {
+      Alert.alert('All Covers Matched', 'Every song in your library already has album artwork!');
+      return;
+    }
+
+    Alert.alert(
+      '✨ Magic Match Covers & Tags',
+      `Found ${unCovered.length} song(s) without album artwork. Would you like Sonance to automatically find and apply official Apple Music 4K covers?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Match All Covers',
+          onPress: async () => {
+            setIsScanning(true);
+            let matchedCount = 0;
+            for (const t of unCovered) {
+              try {
+                const updated = await metadataMatcherService.autoMatchSingleTrack(t);
+                if (updated) matchedCount++;
+              } catch {}
+            }
+            await refreshLibrary();
+            setIsScanning(false);
+            if (Haptics.notificationAsync) {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+            }
+            Alert.alert(
+              'Magic Matching Complete',
+              `Successfully updated ${matchedCount} of ${unCovered.length} song(s) with official 4K album art and tags!`
+            );
+          },
+        },
+      ]
+    );
+  };
+
   const handleOpenImportMenu = () => {
     Alert.alert(
-      'Add Music to Sonance',
-      'Select how you want to add music to your offline library:',
+      'Library Tools & Cloud Sync',
+      'Choose an action for your Sonance library:',
       [
         {
-          text: '🔍 Auto-Scan Phone for Songs',
+          text: '☁️ Sync Google Drive Folder (0 MB)',
+          onPress: onNavigateToCloud,
+        },
+        {
+          text: '📁 Sync / Browse iCloud & Files',
+          onPress: handleBrowseImport,
+        },
+        {
+          text: '🔍 Auto-Scan Phone Storage',
           onPress: handleAutoScan,
         },
         {
-          text: '📁 Browse & Select Files',
-          onPress: handleBrowseImport,
+          text: '✨ Magic Match Missing 4K Covers',
+          onPress: handleBatchMagicMatch,
         },
         {
           text: 'Cancel',
@@ -251,9 +298,7 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LiquidBackground />
-
+    <View style={styles.container}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         {/* Sleek Minimal Branding Header with Official Wordmark Logo */}
         <View style={styles.header}>
@@ -415,17 +460,17 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
                   {
                     backgroundColor: isActive
                       ? isDark
-                        ? 'rgba(255, 255, 255, 0.22)'
-                        : 'rgba(0, 0, 0, 0.08)'
+                        ? 'rgba(250, 36, 60, 0.22)'
+                        : 'rgba(250, 36, 60, 0.12)'
                       : isDark
                       ? 'rgba(255, 255, 255, 0.08)'
                       : 'rgba(255, 255, 255, 0.65)',
                     borderColor: isActive
-                      ? (isDark ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.2)')
+                      ? (isDark ? 'rgba(255, 75, 105, 0.55)' : 'rgba(250, 36, 60, 0.35)')
                       : isDark
                       ? 'rgba(255, 255, 255, 0.16)'
                       : '#FFFFFF',
-                    shadowColor: isDark ? '#000' : '#8CA0BA',
+                    shadowColor: isActive ? '#FA243C' : (isDark ? '#000' : '#8CA0BA'),
                   },
                 ]}
                 onPress={() => {
@@ -438,7 +483,7 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
                 <Text
                   style={[
                     styles.tabChipText,
-                    { color: isActive ? (isDark ? '#FFFFFF' : '#000000') : colors.textSecondary },
+                    { color: isActive ? '#FA243C' : (isDark ? 'rgba(255, 255, 255, 0.75)' : colors.textSecondary) },
                     isActive && styles.activeTabText,
                   ]}
                 >
@@ -520,7 +565,7 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
                 <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
                   {searchQuery
                     ? 'Try searching with a different keyword.'
-                    : 'Auto-scan your phone storage for music, import files from iCloud/Files, or download from YouTube!'}
+                    : 'Auto-scan your phone storage, stream from Google Drive, or import files from iCloud/Files!'}
                 </Text>
                 {!searchQuery && (
                   <View style={styles.emptyActionsRow}>
@@ -573,8 +618,8 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
                       </Text>
                     </TouchableOpacity>
 
-                    {/* Go to Downloader Button */}
-                    {onNavigateToDownloader && (
+                    {/* Cloud Drive Button */}
+                    {onNavigateToCloud && (
                       <TouchableOpacity
                         style={[
                           styles.emptyCtaBtn,
@@ -585,11 +630,11 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onNavigateToDownlo
                             borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(200, 212, 228, 0.5)',
                           },
                         ]}
-                        onPress={onNavigateToDownloader}
+                        onPress={onNavigateToCloud}
                       >
-                        <Ionicons name="search" size={18} color={colors.textSecondary} />
+                        <Ionicons name="cloud-outline" size={18} color={colors.textSecondary} />
                         <Text style={[styles.emptySecondaryText, { color: colors.textSecondary }]}>
-                          Search & Add Music
+                          Connect Google Drive & Cloud
                         </Text>
                       </TouchableOpacity>
                     )}

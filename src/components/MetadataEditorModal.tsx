@@ -11,6 +11,7 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
+  ActivityIndicator,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +21,10 @@ import * as Haptics from 'expo-haptics';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
 import { Track } from '../types/music';
+import {
+  metadataMatcherService,
+  MetadataMatchCandidate,
+} from '../services/metadataMatcherService';
 import { SPACING, RADIUS } from '../constants/theme';
 
 interface MetadataEditorModalProps {
@@ -35,7 +40,7 @@ export const MetadataEditorModal: React.FC<MetadataEditorModalProps> = ({
   onClose,
   onSaved,
 }) => {
-  const { updateTrackMetadata } = useLibrary();
+  const { updateTrackMetadata, refreshLibrary } = useLibrary();
   const { colors, isDark } = useTheme();
 
   const [title, setTitle] = useState('');
@@ -44,12 +49,19 @@ export const MetadataEditorModal: React.FC<MetadataEditorModalProps> = ({
   const [artworkUri, setArtworkUri] = useState<string | undefined>(undefined);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Magic Matcher states
+  const [isSearchingMatches, setIsSearchingMatches] = useState(false);
+  const [candidates, setCandidates] = useState<MetadataMatchCandidate[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
+
   useEffect(() => {
     if (track) {
       setTitle(track.title || '');
       setArtist(track.artist || '');
       setAlbum(track.album || '');
       setArtworkUri(track.artworkUri);
+      setCandidates([]);
+      setHasSearched(false);
     }
   }, [track]);
 
@@ -80,6 +92,50 @@ export const MetadataEditorModal: React.FC<MetadataEditorModalProps> = ({
     }
   };
 
+  const handleSearchAppleMusic = async () => {
+    if (Haptics.impactAsync) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    }
+    try {
+      setIsSearchingMatches(true);
+      setHasSearched(true);
+      const results = await metadataMatcherService.searchCandidates(
+        title || track.title,
+        artist || track.artist
+      );
+      setCandidates(results);
+      if (results.length === 0) {
+        Alert.alert('No Matches', 'Could not find official Apple Music tags for this search query. Try typing the artist and song title.');
+      }
+    } catch (e) {
+      Alert.alert('Search Error', 'Failed to query official Apple Music database.');
+    } finally {
+      setIsSearchingMatches(false);
+    }
+  };
+
+  const handleApplyCandidate = async (candidate: MetadataMatchCandidate) => {
+    if (Haptics.impactAsync) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    }
+    setTitle(candidate.trackName);
+    setArtist(candidate.artistName);
+    if (candidate.collectionName) setAlbum(candidate.collectionName);
+
+    if (candidate.highResArtworkUrl || candidate.artworkUrl) {
+      setIsSaving(true);
+      const downloadedArt = await metadataMatcherService.downloadArtwork(
+        candidate.highResArtworkUrl || candidate.artworkUrl,
+        track.id
+      );
+      if (downloadedArt) {
+        setArtworkUri(downloadedArt);
+      }
+      setIsSaving(false);
+    }
+    setCandidates([]);
+  };
+
   const handleSave = async () => {
     if (!title.trim()) {
       Alert.alert('Validation Error', 'Track title cannot be empty.');
@@ -96,6 +152,8 @@ export const MetadataEditorModal: React.FC<MetadataEditorModalProps> = ({
       };
 
       await updateTrackMetadata(track.id, updates);
+      await refreshLibrary();
+
       if (Haptics.notificationAsync) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       }
@@ -127,7 +185,7 @@ export const MetadataEditorModal: React.FC<MetadataEditorModalProps> = ({
           style={[
             styles.cardWrapper,
             {
-              backgroundColor: isDark ? 'rgba(10, 16, 28, 0.82)' : 'rgba(255, 255, 255, 0.92)',
+              backgroundColor: isDark ? 'rgba(10, 16, 28, 0.88)' : 'rgba(255, 255, 255, 0.95)',
               borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : '#FFFFFF',
               shadowColor: isDark ? colors.primary : '#8CA0BA',
             },
@@ -141,9 +199,9 @@ export const MetadataEditorModal: React.FC<MetadataEditorModalProps> = ({
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.titleRow}>
-                <Ionicons name="create-outline" size={22} color={isDark ? '#FFFFFF' : colors.primary} />
+                <Ionicons name="sparkles" size={20} color={colors.primary} />
                 <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-                  Edit Song Info
+                  Edit &amp; Enhance Song
                 </Text>
               </View>
               <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -152,6 +210,75 @@ export const MetadataEditorModal: React.FC<MetadataEditorModalProps> = ({
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.formContent}>
+              {/* Magic Matcher Quick Action Button */}
+              <TouchableOpacity
+                style={styles.magicMatchBtn}
+                onPress={handleSearchAppleMusic}
+                activeOpacity={0.8}
+                disabled={isSearchingMatches}
+              >
+                <LinearGradient
+                  colors={['#FF2D55', '#FF375F', '#FF6482']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.magicMatchBtnGradient}
+                >
+                  {isSearchingMatches ? (
+                    <>
+                      <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+                      <Text style={styles.magicMatchBtnText}>Finding 4K Cover &amp; Tags...</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Ionicons name="sparkles" size={17} color="#FFFFFF" style={{ marginRight: 8 }} />
+                      <Text style={styles.magicMatchBtnText}>Magic Auto-Match 4K Cover</Text>
+                    </>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+
+              {/* Candidates Results List */}
+              {candidates.length > 0 && (
+                <View style={styles.candidatesSection}>
+                  <Text style={[styles.candidatesHeaderTitle, { color: colors.textPrimary }]}>
+                    Official Matches from Apple Music:
+                  </Text>
+                  {candidates.map((c, i) => (
+                    <TouchableOpacity
+                      key={i}
+                      style={[
+                        styles.candidateRow,
+                        {
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+                          borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+                        },
+                      ]}
+                      onPress={() => handleApplyCandidate(c)}
+                      activeOpacity={0.7}
+                    >
+                      {c.artworkUrl ? (
+                        <Image source={{ uri: c.artworkUrl }} style={styles.candidateThumb} />
+                      ) : (
+                        <View style={styles.candidateThumbFallback}>
+                          <Ionicons name="musical-note" size={18} color={colors.primary} />
+                        </View>
+                      )}
+                      <View style={styles.candidateInfo}>
+                        <Text style={[styles.candidateTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                          {c.trackName}
+                        </Text>
+                        <Text style={[styles.candidateArtist, { color: colors.textMuted }]} numberOfLines={1}>
+                          {c.artistName} {c.collectionName ? `• ${c.collectionName}` : ''}
+                        </Text>
+                      </View>
+                      <View style={styles.applyBadge}>
+                        <Text style={styles.applyBadgeText}>Apply</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
               {/* Artwork Picker Row */}
               <View style={styles.artRow}>
                 <View
@@ -188,7 +315,7 @@ export const MetadataEditorModal: React.FC<MetadataEditorModalProps> = ({
                   >
                     <Ionicons name="camera-outline" size={16} color={isDark ? '#FFFFFF' : colors.primary} />
                     <Text style={[styles.changeArtText, { color: isDark ? '#FFFFFF' : colors.primary }]}>
-                      Change Cover
+                      Custom File...
                     </Text>
                   </TouchableOpacity>
 
@@ -269,54 +396,45 @@ export const MetadataEditorModal: React.FC<MetadataEditorModalProps> = ({
                   ]}
                   value={album}
                   onChangeText={setAlbum}
-                  placeholder="Album or Collection Name"
+                  placeholder="Album (Optional)"
                   placeholderTextColor={colors.textMuted}
                 />
               </View>
-
-              {/* Action Buttons */}
-              <View style={styles.actionsRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.cancelBtn,
-                    {
-                      backgroundColor: isDark
-                        ? 'rgba(255, 255, 255, 0.08)'
-                        : 'rgba(0, 0, 0, 0.05)',
-                      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
-                    },
-                  ]}
-                  onPress={onClose}
-                  disabled={isSaving}
-                >
-                  <Text style={[styles.cancelBtnText, { color: colors.textSecondary }]}>
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.saveBtnWrapper}
-                  onPress={handleSave}
-                  disabled={isSaving}
-                  activeOpacity={0.85}
-                >
-                  <View
-                    style={[
-                      styles.saveBtn,
-                      {
-                        backgroundColor: isDark ? '#FFFFFF' : colors.primary,
-                        shadowColor: isDark ? '#FFFFFF' : colors.primary,
-                      },
-                    ]}
-                  >
-                    <Ionicons name="checkmark" size={18} color={isDark ? '#070A10' : '#FFF'} />
-                    <Text style={[styles.saveBtnText, { color: isDark ? '#070A10' : '#FFF' }]}>
-                      {isSaving ? 'Saving...' : 'Save Changes'}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
             </ScrollView>
+
+            {/* Action Buttons */}
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                onPress={onClose}
+                style={[
+                  styles.cancelBtn,
+                  {
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+                  },
+                ]}
+              >
+                <Text style={[styles.cancelBtnText, { color: colors.textMuted }]}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleSave}
+                disabled={isSaving}
+                style={[styles.saveBtn, { opacity: isSaving ? 0.7 : 1 }]}
+              >
+                <LinearGradient
+                  colors={isDark ? ['#38BDF8', '#0284C7'] : ['#007AFF', '#0055D4']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.saveBtnGradient}
+                >
+                  {isSaving ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.saveBtnText}>Save Changes</Text>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           </BlurView>
         </View>
       </KeyboardAvoidingView>
@@ -329,86 +447,160 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: SPACING.md,
+    padding: SPACING.md,
   },
   backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
   },
   cardWrapper: {
     width: '100%',
     maxWidth: 420,
-    borderRadius: RADIUS.clay,
-    borderWidth: 1.4,
+    borderRadius: RADIUS.xl,
     overflow: 'hidden',
-    shadowOffset: { width: 0, height: 10 },
+    borderWidth: 1.2,
+    shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.35,
-    shadowRadius: 20,
-    elevation: 12,
+    shadowRadius: 28,
+    elevation: 20,
   },
   cardBlur: {
     padding: SPACING.lg,
+    maxHeight: 620,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: SPACING.md,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: SPACING.xs,
   },
   headerTitle: {
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: '800',
     letterSpacing: -0.3,
   },
   closeBtn: {
-    padding: 2,
+    padding: 4,
   },
   formContent: {
-    gap: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
+  magicMatchBtn: {
+    borderRadius: RADIUS.full,
+    overflow: 'hidden',
+    marginBottom: SPACING.md,
+    shadowColor: '#FF2D55',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  magicMatchBtnGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: SPACING.md,
+  },
+  magicMatchBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
+  candidatesSection: {
+    marginBottom: SPACING.md,
+    gap: SPACING.xs,
+  },
+  candidatesHeaderTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  candidateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.xs + 2,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+  },
+  candidateThumb: {
+    width: 38,
+    height: 38,
+    borderRadius: RADIUS.sm,
+    marginRight: SPACING.sm,
+  },
+  candidateThumbFallback: {
+    width: 38,
+    height: 38,
+    borderRadius: RADIUS.sm,
+    backgroundColor: 'rgba(255, 45, 85, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.sm,
+  },
+  candidateInfo: {
+    flex: 1,
+  },
+  candidateTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  candidateArtist: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  applyBadge: {
+    backgroundColor: 'rgba(0, 122, 255, 0.15)',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+  },
+  applyBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#007AFF',
   },
   artRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.md,
-    marginBottom: 4,
+    marginBottom: SPACING.md,
   },
   artworkPreview: {
     width: 80,
     height: 80,
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.md,
     overflow: 'hidden',
-    borderWidth: 1.2,
+    borderWidth: 1,
   },
   artworkImg: {
     width: '100%',
     height: '100%',
   },
   placeholderArt: {
-    width: '100%',
-    height: '100%',
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   artActionCol: {
     flex: 1,
-    gap: 8,
+    gap: SPACING.xs,
   },
   changeArtBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 9,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: SPACING.sm,
     borderRadius: RADIUS.full,
     borderWidth: 1,
   },
@@ -417,33 +609,34 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   removeArtBtn: {
+    alignItems: 'center',
     paddingVertical: 4,
-    alignSelf: 'flex-start',
   },
   removeArtText: {
     fontSize: 12,
     fontWeight: '600',
   },
   fieldGroup: {
-    gap: 6,
+    marginBottom: SPACING.sm,
   },
   fieldLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.5,
+    marginBottom: 4,
   },
   input: {
     height: 44,
     borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    fontSize: 15,
+    paddingHorizontal: SPACING.sm,
+    fontSize: 14,
     fontWeight: '600',
     borderWidth: 1,
   },
-  actionsRow: {
+  buttonRow: {
     flexDirection: 'row',
     gap: SPACING.sm,
-    marginTop: SPACING.sm,
+    marginTop: SPACING.md,
   },
   cancelBtn: {
     flex: 1,
@@ -454,24 +647,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   cancelBtnText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
   },
-  saveBtnWrapper: {
-    flex: 1.5,
+  saveBtn: {
+    flex: 1,
+    height: 46,
     borderRadius: RADIUS.full,
     overflow: 'hidden',
   },
-  saveBtn: {
-    height: 46,
-    flexDirection: 'row',
+  saveBtnGradient: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 6,
   },
   saveBtnText: {
-    color: '#FFF',
-    fontSize: 15,
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '800',
   },
 });
